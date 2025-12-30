@@ -1,0 +1,34 @@
+[package]
+name = "os"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitflags = "2.0.2"
+buddy_system_allocator = "0.8"
+lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
+log = "0.4"
+spin = "0.10.0"
+virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "4ee80e5" }
+xmas-elf = "0.10.0"
+
+[target.loongarch64-unknown-none.dependencies]
+loongArch64 = "0.2.5"
+[target.riscv64gc-unknown-none-elf.dependencies]
+riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
+
+
+
+[features]
+
+riscv = []
+loongarch = []
+
+board_laqemu = ["loongarch"]
+board_rvqemu = ["riscv"]
+
+
+default = ["board_rvqemu"]
+#default = ["board_laqemu"]
