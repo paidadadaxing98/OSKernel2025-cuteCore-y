@@ -46,5 +46,9 @@ pub fn rust_main() -> ! {
     println!("Memory management initialized.");
     hal::machine_init();
     println!("machine init completed.");
+    fs::list_apps();
+    task::add_initproc();
+    println!("Initialization complete.");
+    task::run_tasks();
     shutdown();
 }

@@ -1,4 +1,6 @@
 .idea/
 .vscode/
 os/target/
-bin/
+easy-fs/target/
+easy-fs-fuse/target/
+user/target/

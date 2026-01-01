@@ -14,8 +14,14 @@ impl File for Stdin {
     }
     fn read(&self, mut user_buf: UserBuffer) -> usize {
         assert_eq!(user_buf.len(), 1);
-        //println!("before UART.read() in Stdin::read()");
-        let ch = console_getchar();
+
+        // 根据 sbi 接口规定，若无输入则返回 usize::MAX
+        let ch = loop {
+            let c = console_getchar();
+            if c != usize::MAX {
+                break c;
+            }
+        };
         unsafe {
             user_buf.buffers[0].as_mut_ptr().write_volatile(ch as u8);
         }

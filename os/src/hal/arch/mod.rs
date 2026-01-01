@@ -6,7 +6,7 @@ pub use riscv::{
     bootstrap_init,
     config::{
         KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE, PAGE_SIZE_BITS, TRAMPOLINE,
-        TRAP_CONTEXT_BASE, USER_STACK_SIZE,
+        TRAP_CONTEXT_BASE, USER_STACK_SIZE, BLOCK_SZ,
     },
     kernel_stack::{kstack_alloc, KernelStack, ustack_bottom_from_tid, trap_cx_bottom_from_tid},
     machine_init,

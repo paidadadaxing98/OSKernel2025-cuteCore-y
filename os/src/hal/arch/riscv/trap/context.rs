@@ -5,38 +5,38 @@ use riscv::register::sstatus::{read, Sstatus, SPP};
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct GeneralRegs {
-    pub pc: usize,
-    pub ra: usize,
-    pub sp: usize,
-    pub gp: usize,
-    pub tp: usize,
-    pub t0: usize,
-    pub t1: usize,
-    pub t2: usize,
-    pub s0: usize,
-    pub s1: usize,
-    pub a0: usize,
-    pub a1: usize,
-    pub a2: usize,
-    pub a3: usize,
-    pub a4: usize,
-    pub a5: usize,
-    pub a6: usize,
-    pub a7: usize,
-    pub s2: usize,
-    pub s3: usize,
-    pub s4: usize,
-    pub s5: usize,
-    pub s6: usize,
-    pub s7: usize,
-    pub s8: usize,
-    pub s9: usize,
-    pub s10: usize,
-    pub s11: usize,
-    pub t3: usize,
-    pub t4: usize,
-    pub t5: usize,
-    pub t6: usize,
+    pub pc: usize,  // 0
+    pub ra: usize,  // 1
+    pub sp: usize,  // 2
+    pub gp: usize,  // 3
+    pub tp: usize,  // 4
+    pub t0: usize,  // 5
+    pub t1: usize,  // 6
+    pub t2: usize,  // 7
+    pub s0: usize,  // 8
+    pub s1: usize,  // 9
+    pub a0: usize,  // 10
+    pub a1: usize,  // 11
+    pub a2: usize,  // 12
+    pub a3: usize,  // 13
+    pub a4: usize,  // 14
+    pub a5: usize,  // 15
+    pub a6: usize,  // 16
+    pub a7: usize,  // 17
+    pub s2: usize,  // 18
+    pub s3: usize,  // 19
+    pub s4: usize,  // 20
+    pub s5: usize,  // 21
+    pub s6: usize,  // 22
+    pub s7: usize,  // 23
+    pub s8: usize,  // 24
+    pub s9: usize,  // 25
+    pub s10: usize, // 26
+    pub s11: usize, // 27
+    pub t3: usize,  // 28
+    pub t4: usize,  // 29
+    pub t5: usize,  // 30
+    pub t6: usize,  // 31
 }
 //
 // #[repr(C)]

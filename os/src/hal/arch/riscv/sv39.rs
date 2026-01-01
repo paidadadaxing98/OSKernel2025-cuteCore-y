@@ -74,6 +74,14 @@ impl PageTable for SV39PageTable {
         }
     }
 
+    fn new_kernel() -> Self {
+        let frame = frame_alloc().unwrap();
+        Self {
+            root_ppn: frame.ppn,
+            frames: vec![frame],
+        }
+    }
+
     /// Temporarily used to get arguments from user space.
     fn from_token(satp: usize) -> Self {
         Self {

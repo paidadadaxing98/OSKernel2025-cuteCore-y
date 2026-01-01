@@ -10,7 +10,7 @@ pub use arch::{trap_handler, trap_return};
 pub use arch::{KernelStack, PageTableEntryImpl, PageTableImpl, TrapContext};
 pub use arch::{
     KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE, PAGE_SIZE_BITS, TRAMPOLINE,
-    TRAP_CONTEXT_BASE, USER_STACK_SIZE,
+    TRAP_CONTEXT_BASE, USER_STACK_SIZE, BLOCK_SZ,
 };
 pub use arch::{ustack_bottom_from_tid, trap_cx_bottom_from_tid};
 pub use arch::__switch;

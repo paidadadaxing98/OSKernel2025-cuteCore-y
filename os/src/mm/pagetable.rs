@@ -5,6 +5,8 @@ use alloc::vec::Vec;
 
 pub trait PageTable {
     fn new() -> Self;
+    
+    fn new_kernel() -> Self;
 
     fn from_token(token: usize) -> Self;
 

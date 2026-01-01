@@ -3,20 +3,17 @@ use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    match info.location() {
-        Some(_location) => {
-            // log::error!(
-            //     "[kernel] panicked at '{}', {}:{}:{}",
-            //     // info.message().unwrap(),
-            //     info.message(),
-            //     location.file(),
-            //     location.line(),
-            //     location.column()
-            // );
-        }
-        // None => println!("[kernel] panicked at '{}'", info.message().unwrap()),
-        // None => println!("[kernel] panicked at '{}", info.message()),
-        None => {}
+    println!("\n[kernel] PANIC!");
+    if let Some(location) = info.location() {
+        println!(
+            "[kernel] panicked at {}:{}:{}",
+            location.file(),
+            location.line(),
+            location.column()
+        );
+    }
+    if let Some(msg) = info.message() {
+        println!("[kernel] Message: {}", msg);
     }
     shutdown()
 }

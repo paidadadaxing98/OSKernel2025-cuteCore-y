@@ -40,7 +40,7 @@ pub struct MemorySet<T: PageTable> {
 impl<T: PageTable> MemorySet<T> {
     pub fn new_bare() -> Self {
         Self {
-            page_table: T::new(),
+            page_table: T::new_kernel(),
             areas: Vec::new(),
         }
     }
