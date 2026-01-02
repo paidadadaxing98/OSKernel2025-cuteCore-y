@@ -17,7 +17,7 @@ OBJDUMP := rust-objdump --arch-name=riscv64
 OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 
-build: $(KERNEL_BIN) mv
+build: $(KERNEL_BIN) mv fs-img
 
 mv:
 	@cp $(KERNEL_BIN) ${KERNEL_QEMU}
@@ -25,7 +25,7 @@ mv:
 $(KERNEL_BIN): kernel
 	@$(OBJCOPY) ${KERNEL_ELF} --strip-all -O binary $@
 
-kernel: pre
+kernel: pre user
 	@echo Platform: $(BOARD), SBI: $(SBI)
 	@cp src/hal/arch/riscv/linker-$(BOARD).ld src/hal/arch/riscv/linker.ld
 	@LOG=${LOG} cargo build --${MODE} --target $(TARGET) --features "board_$(BOARD)"
@@ -33,6 +33,12 @@ kernel: pre
 pre:
 	@rm .cargo/config.toml || true
 	@cp cargo/rv-config.toml .cargo/config.toml
+
+fs-img:
+	@cd ../easy-fs-fuse && cargo run --release -- -s ../user/src/bin -t ../user/target/$(TARGET)/$(MODE)/
+
+user:
+	@cd ../user && make build
 
 run:
 	qemu-system-riscv64 \
@@ -52,5 +58,4 @@ run:
 
 
 clean:
-	@rm -f ../kernel-qemu
 	@rm src/hal/arch/riscv/linker.ld
