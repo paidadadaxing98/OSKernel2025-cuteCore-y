@@ -1,24 +1,31 @@
-use alloc::vec::Vec;
-use lazy_static::lazy_static;
-use virtio_drivers::VirtIOBlk;
 use crate::drivers::block::block_dev::BlockDevice;
 use crate::hal::PageTableImpl;
 use crate::mm;
-use crate::mm::{frame_alloc_more, frame_dealloc, kernel_token, FrameTracker, PageTable, StepByOne};
+use crate::mm::{
+    frame_alloc_more, frame_dealloc, kernel_token, FrameTracker, PageTable, StepByOne,
+};
 use crate::sync::UPIntrFreeCell;
+use alloc::vec::Vec;
+use lazy_static::lazy_static;
+use virtio_drivers::VirtIOBlk;
 
 const VIRTIO0: usize = 0x10001000;
-
 
 pub struct VirtIOBlock(UPIntrFreeCell<VirtIOBlk<'static, VirtIOHal>>);
 
 impl BlockDevice for VirtIOBlock {
     fn read_block(&self, block_id: usize, buf: &mut [u8]) {
-        self.0.exclusive_access().read_block(block_id, buf).expect("Error when reading VirtIOBlk");
+        self.0
+            .exclusive_access()
+            .read_block(block_id, buf)
+            .expect("Error when reading VirtIOBlk");
     }
 
     fn write_block(&self, block_id: usize, buf: &[u8]) {
-        self.0.exclusive_access().write_block(block_id, buf).expect("Error when writing VirtIOBlk");
+        self.0
+            .exclusive_access()
+            .write_block(block_id, buf)
+            .expect("Error when writing VirtIOBlk");
     }
 }
 
@@ -27,7 +34,8 @@ impl VirtIOBlock {
     pub fn new() -> Self {
         unsafe {
             Self(UPIntrFreeCell::new(
-                VirtIOBlk::<VirtIOHal>::new(&mut *(VIRTIO0 as *mut virtio_drivers::VirtIOHeader)).unwrap()
+                VirtIOBlk::<VirtIOHal>::new(&mut *(VIRTIO0 as *mut virtio_drivers::VirtIOHeader))
+                    .unwrap(),
             ))
         }
     }
@@ -65,6 +73,9 @@ impl virtio_drivers::Hal for VirtIOHal {
     }
 
     fn virt_to_phys(vaddr: virtio_drivers::VirtAddr) -> virtio_drivers::PhysAddr {
-        PageTableImpl::from_token(kernel_token()).translate_va(mm::VirtAddr::from(vaddr)).unwrap().into()
+        PageTableImpl::from_token(kernel_token())
+            .translate_va(mm::VirtAddr::from(vaddr))
+            .unwrap()
+            .into()
     }
 }

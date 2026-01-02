@@ -5,10 +5,10 @@ pub mod config;
 pub mod kernel_stack;
 pub mod sbi;
 pub mod sv39;
+pub mod switch;
 pub mod sync;
 pub mod timer;
 pub mod trap;
-pub mod switch;
 
 pub fn bootstrap_init() {}
 

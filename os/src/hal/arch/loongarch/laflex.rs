@@ -1,10 +1,15 @@
+use crate::hal::arch::loongarch::tlb::tlb_global_invalidate;
+use crate::hal::{
+    PageTableEntryImpl, MEMORY_HIGH_BASE, MEMORY_HIGH_BASE_VPN, PAGE_SIZE_BITS, PALEN, VPN_SEG_MASK,
+};
+use crate::mm::{
+    frame_alloc, FrameTracker, MapPermission, PageTable, PhysAddr, PhysPageNum, VirtAddr,
+    VirtPageNum,
+};
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::{bitflags, Flags};
 use loongArch64::register::{pgdh, pgdl};
-use crate::hal::{PageTableEntryImpl, MEMORY_HIGH_BASE, MEMORY_HIGH_BASE_VPN, PAGE_SIZE_BITS, PALEN, VPN_SEG_MASK};
-use crate::hal::arch::loongarch::tlb::tlb_global_invalidate;
-use crate::mm::{frame_alloc, FrameTracker, MapPermission, PageTable, PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 
 bitflags! {
     #[derive(Eq, PartialEq)]
@@ -28,7 +33,6 @@ bitflags! {
         const RPLV = 1 << (usize::BITS-1); // 限制特权级别使能位
     }
 }
-
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -112,7 +116,6 @@ pub struct LaflexPageTable {
 }
 
 impl LaflexPageTable {
-
     fn is_ident_map(&self, vpn: VirtPageNum) -> bool {
         self.is_kernel_pt() & (vpn.0 & VPN_SEG_MASK == MEMORY_HIGH_BASE_VPN)
     }
@@ -181,7 +184,7 @@ impl PageTable for LaflexPageTable {
         let mut ppn = self.get_root_ppn();
         let mut result: Option<&mut PageTableEntry> = None;
         for (i, idx) in idxs.iter().enumerate() {
-            let pte= &mut ppn.get_pte_array::<PageTableEntry>()[*idx];
+            let pte = &mut ppn.get_pte_array::<PageTableEntry>()[*idx];
             if i == 3 {
                 result = Some(pte);
                 break;
@@ -223,12 +226,13 @@ impl PageTable for LaflexPageTable {
     }
 
     fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
-        self.find_pte(va.clone().floor()).map(|pte: PageTableEntry| {
-            let aligned_pa: PhysAddr = pte.ppn().into();
-            let offset = va.page_offset();
-            let aligned_pa_usize: usize = aligned_pa.into();
-            (aligned_pa_usize + offset).into()
-        })
+        self.find_pte(va.clone().floor())
+            .map(|pte: PageTableEntry| {
+                let aligned_pa: PhysAddr = pte.ppn().into();
+                let offset = va.page_offset();
+                let aligned_pa_usize: usize = aligned_pa.into();
+                (aligned_pa_usize + offset).into()
+            })
     }
 
     fn activate(&self) {
@@ -238,7 +242,6 @@ impl PageTable for LaflexPageTable {
         } else {
             pgdl::set_base(self.get_root_ppn().0 << PAGE_SIZE_BITS);
         }
-
     }
 
     fn token(&self) -> usize {

@@ -2,10 +2,13 @@ pub mod context;
 
 use crate::hal::TRAMPOLINE;
 use crate::syscall::syscall;
-use crate::task::{check_signals_of_current, current_add_signal, current_trap_cx, current_trap_cx_user_va, current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags};
+use crate::task::{
+    check_signals_of_current, current_add_signal, current_trap_cx, current_trap_cx_user_va,
+    current_user_token, exit_current_and_run_next, suspend_current_and_run_next, SignalFlags,
+};
 use core::arch::{asm, global_asm};
 use riscv::register::mtvec::TrapMode;
-use riscv::register::scause::{Interrupt, Trap, Exception};
+use riscv::register::scause::{Exception, Interrupt, Trap};
 use riscv::register::{scause, sie, sscratch, sstatus, stval, stvec};
 
 use crate::hal::arch::riscv::timer::set_next_trigger;
@@ -91,7 +94,10 @@ pub fn trap_handler() -> ! {
 
             enable_supervisor_interrupt();
 
-            let result = syscall(cx.general_regs.a7, [cx.general_regs.a0, cx.general_regs.a1, cx.general_regs.a2]);
+            let result = syscall(
+                cx.general_regs.a7,
+                [cx.general_regs.a0, cx.general_regs.a1, cx.general_regs.a2],
+            );
             cx = current_trap_cx();
             cx.general_regs.a0 = result as usize;
         }
@@ -135,7 +141,8 @@ pub fn trap_return() -> ! {
         fn __alltraps();
         fn __restore();
     }
-    let restore_va = __restore as *const () as usize - __alltraps as *const () as usize + TRAMPOLINE;
+    let restore_va =
+        __restore as *const () as usize - __alltraps as *const () as usize + TRAMPOLINE;
     unsafe {
         asm!(
             "fence.i",
@@ -144,6 +151,6 @@ pub fn trap_return() -> ! {
             in("a0") trap_cx_user_va,
             in("a1") user_satp,
             options(noreturn)
-        );
+        )
     }
 }

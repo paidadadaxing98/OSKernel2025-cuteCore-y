@@ -1,10 +1,10 @@
-use alloc::collections::{BTreeMap, VecDeque};
-use alloc::sync::Arc;
-use lazy_static::lazy_static;
 use crate::sync::UPIntrFreeCell;
 use crate::task::process::ProcessControlBlock;
 use crate::task::task::TaskStatus;
 use crate::task::TaskControlBlock;
+use alloc::collections::{BTreeMap, VecDeque};
+use alloc::sync::Arc;
+use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref TASK_MANAGER: UPIntrFreeCell<TaskManager> =
@@ -12,7 +12,6 @@ lazy_static! {
     pub static ref PID2PCB: UPIntrFreeCell<BTreeMap<usize, Arc<ProcessControlBlock>>> =
         unsafe { UPIntrFreeCell::new(BTreeMap::new()) };
 }
-
 
 pub fn add_task(task: Arc<TaskControlBlock>) {
     TASK_MANAGER.exclusive_access().add(task);
@@ -44,7 +43,6 @@ pub fn remove_from_pid2process(pid: usize) {
         panic!("cannot find pid {} in pid2task!", pid);
     }
 }
-
 
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskControlBlock>>,

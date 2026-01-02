@@ -1,9 +1,9 @@
-use super::{get_block_cache};
+use super::get_block_cache;
+use crate::drivers::BlockDevice;
+use crate::hal::BLOCK_SZ;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Result};
-use crate::drivers::BlockDevice;
-use crate::hal::BLOCK_SZ;
 
 const EFS_MAGIC: u32 = 0x3b800001;
 const INODE_DIRECT_COUNT: usize = 28;
@@ -317,11 +317,11 @@ impl DiskInode {
                 self.get_block_id(start_block as u32, block_device) as usize,
                 Arc::clone(block_device),
             )
-                .lock()
-                .read(0, |data_block: &DataBlock| {
-                    let src = &data_block[start % BLOCK_SZ..start % BLOCK_SZ + block_read_size];
-                    dst.copy_from_slice(src);
-                });
+            .lock()
+            .read(0, |data_block: &DataBlock| {
+                let src = &data_block[start % BLOCK_SZ..start % BLOCK_SZ + block_read_size];
+                dst.copy_from_slice(src);
+            });
             read_size += block_read_size;
             // move to next block
             if end_current_block == end {
@@ -354,12 +354,12 @@ impl DiskInode {
                 self.get_block_id(start_block as u32, block_device) as usize,
                 Arc::clone(block_device),
             )
-                .lock()
-                .modify(0, |data_block: &mut DataBlock| {
-                    let src = &buf[write_size..write_size + block_write_size];
-                    let dst = &mut data_block[start % BLOCK_SZ..start % BLOCK_SZ + block_write_size];
-                    dst.copy_from_slice(src);
-                });
+            .lock()
+            .modify(0, |data_block: &mut DataBlock| {
+                let src = &buf[write_size..write_size + block_write_size];
+                let dst = &mut data_block[start % BLOCK_SZ..start % BLOCK_SZ + block_write_size];
+                dst.copy_from_slice(src);
+            });
             write_size += block_write_size;
             // move to next block
             if end_current_block == end {

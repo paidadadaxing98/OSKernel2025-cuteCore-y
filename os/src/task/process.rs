@@ -1,21 +1,20 @@
-use alloc::string::String;
 use crate::fs::{File, Stdin, Stdout};
 use crate::hal::{trap_handler, PageTableImpl, TrapContext};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
 use crate::sync::{Condvar, Mutex, Semaphore, UPIntrFreeCell, UPIntrRefMut};
+use crate::task::manager::{add_task, insert_into_pid2process};
 use crate::task::pid::{pid_alloc, PidHandle, RecycleAllocator};
 use crate::task::signal::SignalFlags;
 use crate::task::task::TaskControlBlock;
+use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
-use crate::task::manager::{add_task, insert_into_pid2process};
 
 pub struct ProcessControlBlock {
     pub pid: PidHandle,
     inner: UPIntrFreeCell<ProcessControlBlockInner>,
 }
-
 
 pub struct ProcessControlBlockInner {
     pub is_zombie: bool,
@@ -31,7 +30,6 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
 }
-
 
 impl ProcessControlBlock {
     pub fn inner_exclusive_access(&self) -> UPIntrRefMut<'_, ProcessControlBlockInner> {
@@ -224,8 +222,6 @@ impl ProcessControlBlock {
     }
 }
 
-
-
 impl ProcessControlBlockInner {
     #[allow(unused)]
     pub fn get_user_token(&self) -> usize {
@@ -257,4 +253,3 @@ impl ProcessControlBlockInner {
         self.tasks[tid].as_ref().unwrap().clone()
     }
 }
-

@@ -1,8 +1,8 @@
-use crate::fs::{OpenFlags, open_file};
+use crate::fs::{open_file, OpenFlags};
 use crate::mm::{translated_ref, translated_refmut, translated_str};
 use crate::task::{
-    SignalFlags, current_process, current_task, current_user_token, exit_current_and_run_next,
-    pid2process, suspend_current_and_run_next,
+    current_process, current_task, current_user_token, exit_current_and_run_next, pid2process,
+    suspend_current_and_run_next, SignalFlags,
 };
 use crate::timer::get_time_ms;
 use alloc::string::String;

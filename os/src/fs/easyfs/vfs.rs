@@ -1,12 +1,12 @@
 use super::{
-    block_cache_sync_all, get_block_cache, DirEntry, DiskInode, DiskInodeType,
-    EasyFileSystem, DIRENT_SZ,
+    block_cache_sync_all, get_block_cache, DirEntry, DiskInode, DiskInodeType, EasyFileSystem,
+    DIRENT_SZ,
 };
+use crate::drivers::BlockDevice;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
-use crate::drivers::BlockDevice;
 
 pub struct Inode {
     block_id: usize,

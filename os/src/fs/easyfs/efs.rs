@@ -1,12 +1,11 @@
-
-use alloc::sync::Arc;
-use spin::Mutex;
 use crate::drivers::BlockDevice;
 use crate::fs::easyfs::bitmap::Bitmap;
 use crate::fs::easyfs::block_cache::{block_cache_sync_all, get_block_cache};
-use crate::fs::easyfs::Inode;
 use crate::fs::easyfs::layout::{DiskInode, DiskInodeType, SuperBlock};
+use crate::fs::easyfs::Inode;
 use crate::hal::BLOCK_SZ;
+use alloc::sync::Arc;
+use spin::Mutex;
 
 pub struct EasyFileSystem {
     pub block_device: Arc<dyn BlockDevice>,

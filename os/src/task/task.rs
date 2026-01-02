@@ -1,4 +1,7 @@
-use crate::hal::{kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack, TrapContext, PAGE_SIZE, USER_STACK_SIZE};
+use crate::hal::{
+    kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack, TrapContext,
+    PAGE_SIZE, USER_STACK_SIZE,
+};
 use crate::mm::{MapPermission, PhysPageNum, VirtAddr};
 use crate::sync::{UPIntrFreeCell, UPIntrRefMut};
 use crate::task::context::TaskContext;
@@ -49,7 +52,6 @@ impl TaskControlBlock {
     }
 }
 
-
 pub struct TaskControlBlockInner {
     pub res: Option<TaskUserRes>,
     pub trap_cx_ppn: PhysPageNum,
@@ -57,7 +59,6 @@ pub struct TaskControlBlockInner {
     pub task_status: TaskStatus,
     pub exit_code: Option<i32>,
 }
-
 
 impl TaskControlBlockInner {
     pub fn get_trap_cx(&self) -> &'static mut TrapContext {
@@ -70,13 +71,11 @@ impl TaskControlBlockInner {
     }
 }
 
-
 pub struct TaskUserRes {
     pub tid: usize,
     pub ustack_base: usize,
     pub process: Weak<ProcessControlBlock>,
 }
-
 
 impl TaskUserRes {
     pub fn new(

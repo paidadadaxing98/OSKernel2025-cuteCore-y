@@ -1,11 +1,11 @@
 use crate::hal::{get_clock_freq, get_time};
+use crate::sync::UPIntrFreeCell;
+use crate::task::{wakeup_task, TaskControlBlock};
+use alloc::collections::BinaryHeap;
+use alloc::sync::Arc;
+use core::cmp::Ordering;
 use core::time::Duration;
 use lazy_static::lazy_static;
-use crate::sync::UPIntrFreeCell;
-use alloc::sync::Arc;
-use alloc::collections::BinaryHeap;
-use crate::task::{TaskControlBlock, wakeup_task};
-use core::cmp::Ordering;
 
 pub const MSEC_PER_SEC: usize = 1000;
 
@@ -31,7 +31,6 @@ pub fn get_time_us() -> usize {
 pub fn current_time_duration() -> Duration {
     Duration::from_micros(get_time_us() as u64)
 }
-
 
 pub struct TimerCondVar {
     pub expire_ms: usize,

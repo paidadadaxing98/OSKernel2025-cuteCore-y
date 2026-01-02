@@ -1,8 +1,8 @@
-use alloc::sync::{Arc, Weak};
 use crate::fs::File;
 use crate::mm::UserBuffer;
 use crate::sync::UPIntrFreeCell;
 use crate::task::suspend_current_and_run_next;
+use alloc::sync::{Arc, Weak};
 
 pub struct Pipe {
     readable: bool,

@@ -1,29 +1,29 @@
 mod context;
+mod manager;
 mod pid;
 mod process;
+mod processor;
 mod signal;
 mod task;
-mod manager;
-mod processor;
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use lazy_static::lazy_static;
 pub use context::TaskContext;
-pub use pid::{PidHandle, pid_alloc};
+use lazy_static::lazy_static;
 pub use manager::{add_task, pid2process, remove_from_pid2process, wakeup_task};
+pub use pid::{pid_alloc, PidHandle};
 pub use processor::{
     current_kstack_top, current_process, current_task, current_trap_cx, current_trap_cx_user_va,
     current_user_token, run_tasks, schedule, take_current_task,
 };
 
-pub use signal::SignalFlags;
-pub use task::{TaskControlBlock, TaskStatus};
 use crate::fs::{open_file, OpenFlags};
 use crate::hal::shutdown;
 use crate::task::pid::IDLE_PID;
 use crate::task::process::ProcessControlBlock;
 use crate::task::task::TaskUserRes;
+pub use signal::SignalFlags;
+pub use task::{TaskControlBlock, TaskStatus};
 
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
@@ -50,13 +50,10 @@ pub fn block_current_task() -> *mut TaskContext {
     &mut task_inner.task_cx as *mut TaskContext
 }
 
-
 pub fn block_current_and_run_next() {
     let task_cx_ptr = block_current_task();
     schedule(task_cx_ptr);
 }
-
-
 
 /// Exit the current 'Running' task and run the next task in task list.
 pub fn exit_current_and_run_next(exit_code: i32) {
@@ -141,7 +138,6 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     schedule(&mut _unused as *mut _);
 }
 
-
 lazy_static! {
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
         let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();
@@ -165,4 +161,3 @@ pub fn current_add_signal(signal: SignalFlags) {
     let mut process_inner = process.inner_exclusive_access();
     process_inner.signals |= signal;
 }
-

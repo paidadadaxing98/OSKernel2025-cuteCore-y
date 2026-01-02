@@ -1,3 +1,5 @@
+use crate::drivers::BlockDevice;
+use crate::hal::BLOCK_SZ;
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
@@ -7,8 +9,6 @@ use core::ptr::{addr_of, addr_of_mut};
 use core::slice;
 use lazy_static::*;
 use spin::Mutex;
-use crate::drivers::BlockDevice;
-use crate::hal::BLOCK_SZ;
 
 /// Use `ManuallyDrop` to ensure data is deallocated with an alignment of `BLOCK_SZ`
 struct CacheData(ManuallyDrop<Box<[u8; BLOCK_SZ]>>);

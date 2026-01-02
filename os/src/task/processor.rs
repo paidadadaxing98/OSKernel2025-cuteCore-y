@@ -1,10 +1,10 @@
-use alloc::sync::Arc;
-use lazy_static::lazy_static;
 use crate::hal::{TrapContext, __switch};
 use crate::sync::UPIntrFreeCell;
-use crate::task::{TaskContext, TaskControlBlock, TaskStatus};
 use crate::task::manager::fetch_task;
 use crate::task::process::ProcessControlBlock;
+use crate::task::{TaskContext, TaskControlBlock, TaskStatus};
+use alloc::sync::Arc;
+use lazy_static::lazy_static;
 
 pub struct Processor {
     current: Option<Arc<TaskControlBlock>>,

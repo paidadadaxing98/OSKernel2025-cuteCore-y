@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 pub trait PageTable {
     fn new() -> Self;
-    
+
     fn new_kernel() -> Self;
 
     fn from_token(token: usize) -> Self;
@@ -25,9 +25,7 @@ pub trait PageTable {
     fn activate(&self);
 
     fn token(&self) -> usize;
-    
 }
-
 
 pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&'static mut [u8]> {
     let page_table: PageTableImpl = PageTable::from_token(token);

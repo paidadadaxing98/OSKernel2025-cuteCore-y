@@ -13,4 +13,7 @@ pub fn init() {
 pub use crate::mm::memory_set::{kernel_token, MapPermission, MemorySet, KERNEL_SPACE};
 pub use address::{PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 pub use frame_allocator::{frame_alloc, frame_alloc_more, frame_dealloc, FrameTracker};
-pub use pagetable::{PageTable, UserBuffer, translated_byte_buffer, translated_str, translated_refmut, translated_ref};
+pub use pagetable::{
+    translated_byte_buffer, translated_ref, translated_refmut, translated_str, PageTable,
+    UserBuffer,
+};
