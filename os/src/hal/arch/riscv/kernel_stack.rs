@@ -1,3 +1,30 @@
+//! 内核栈管理模块
+//!
+//! # Overview
+//! 本模块提供内核栈的分配与管理功能，用于操作系统内核线程。
+//! 每个内核线程分配独立的栈，并为每个线程分配 Trap Context 页面，用于保存用户态寄存器状态。
+//! 模块保证内核栈在虚拟地址空间的安全分配、映射与释放。
+//!
+//! # Design
+//! - 内核栈从虚拟地址空间顶端的 `TRAMPOLINE` 向低地址分配。
+//! - 每个栈之间设置一页保护页，防止栈溢出。
+//! - 使用 `RecycleAllocator` 进行栈 ID 管理：先复用回收的 ID，否则分配新的。
+//! - `KernelStack` 对象 drop 时，会自动解除映射并回收栈 ID。
+//!
+//! # Assumptions
+//! - 单线程环境下 `KSTACK_ALLOCATOR` 的独占访问由 `UPIntrFreeCell` 保证。
+//! - `TRAMPOLINE` 和 `TRAP_CONTEXT_BASE` 已正确配置。
+//! - `PAGE_SIZE` 与硬件页大小一致。
+//!
+//! # Safety
+//! - `push_on_top` 通过裸指针写入内核栈，必须保证栈空间足够并且类型大小正确。
+//! - 映射与解除映射必须遵守虚拟内存管理规则。
+//!
+//! # Invariants
+//! - 每个 `KernelStack` 对应唯一的栈 ID。
+//! - 回收的 ID 仅在完全释放后才会被重新使用。
+//! - 内核栈在使用期间，虚拟地址范围始终完整映射。
+
 use crate::hal::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE};
 use crate::mm::{MapPermission, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPIntrFreeCell;
@@ -5,17 +32,20 @@ use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    /// 单线程安全的内核栈分配器
+    /// 全局内核栈分配器实例
     ///
-    /// `lazy_static` 宏保证在第一次使用时初始化
+    /// # Safety
+    /// `UPIntrFreeCell` 保证单核环境下的独占访问。
     static ref KSTACK_ALLOCATOR: UPIntrFreeCell<RecycleAllocator> =
         unsafe { UPIntrFreeCell::new(RecycleAllocator::new()) };
 }
 
 
-/// 内核栈分配器结构体
+/// 回收式内核栈分配器
 ///
-/// 使用简单的回收分配策略（Recycle Allocator）：
+/// # Fields
+/// - `current`：当前已分配的最大栈 ID
+/// - `recycled`：回收的栈 ID，等待复用
 struct RecycleAllocator {
     /// 当前分配的最大栈 ID
     current: usize,
@@ -23,9 +53,10 @@ struct RecycleAllocator {
     recycled: Vec<usize>,
 }
 
-/// 分配一个新的内核栈
+/// 分配一个新的内核栈并映射到内核空间
 ///
-/// 返回一个 `KernelStack` 句柄，内部记录栈 ID
+/// # Returns
+/// `KernelStack` 栈句柄
 pub fn kstack_alloc() -> KernelStack {
     // 从分配器获得一个可用栈 ID
     let kstack_id = KSTACK_ALLOCATOR.exclusive_access().alloc();
@@ -44,7 +75,13 @@ pub fn kstack_alloc() -> KernelStack {
     KernelStack(kstack_id)
 }
 
-/// 根据内核栈 ID 计算栈的底部和顶部虚拟地址
+/// 根据栈 ID 计算内核栈底和栈顶地址
+///
+/// # Arguments
+/// - `kstack_id`：内核栈 ID
+///
+/// # Returns
+/// `(bottom, top)` 虚拟地址
 fn kernel_stack_position(kstack_id: usize) -> (usize, usize) {
     // 栈从 trampoline 段向低地址增长，每个栈之间间隔一页保护页
     let top = TRAMPOLINE - kstack_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
@@ -53,7 +90,7 @@ fn kernel_stack_position(kstack_id: usize) -> (usize, usize) {
 }
 
 impl RecycleAllocator {
-    /// 创建一个新的回收分配器
+    /// 创建一个新的回收式栈分配器
     fn new() -> Self {
         RecycleAllocator {
             current: 0,
@@ -75,7 +112,9 @@ impl RecycleAllocator {
 
     /// 回收一个栈 ID
     ///
-    /// 确保 ID 在当前范围内，并且未被重复回收
+    /// # Panics
+    /// - `id >= current` 时会 panic
+    /// - `id` 已经被回收过时会 panic
     fn dealloc(&mut self, id: usize) {
         assert!(id < self.current);
         assert!(
@@ -87,27 +126,41 @@ impl RecycleAllocator {
     }
 }
 
-/// 内核栈句柄，封装栈 ID
+/// 内核栈句柄
+///
+/// # Fields
+/// - `0`：栈 ID，由 `RecycleAllocator` 分配
 pub struct KernelStack(pub usize);
 
-/// 通过线程 ID 获取 Trap Context 的底部虚拟地址
+/// 获取线程对应 Trap Context 页底部地址
 ///
-/// Trap Context 存储用户态寄存器状态，每个线程占一页
+/// # Arguments
+/// - `tid`：线程 ID
+///
+/// # Returns
+/// Trap Context 页底部虚拟地址
 pub fn trap_cx_bottom_from_tid(tid: usize) -> usize {
     TRAP_CONTEXT_BASE - tid * PAGE_SIZE
 }
 
-/// 通过线程 ID 和用户栈基地址计算用户栈底部虚拟地址
+/// 根据用户栈基地址和线程 ID 获取用户栈底部地址
 ///
-/// 每个用户栈占 USER_STACK_SIZE + 保护页
+/// # Arguments
+/// - `ustack_base`：用户栈基地址
+/// - `tid`：线程 ID
+///
+/// # Returns
+/// 用户栈底部虚拟地址
 pub fn ustack_bottom_from_tid(ustack_base: usize, tid: usize) -> usize {
     ustack_base + tid * (PAGE_SIZE + USER_STACK_SIZE)
 }
 
 impl KernelStack {
-    /// 将一个值压入内核栈顶部
+    /// 在内核栈顶压入一个值
     ///
-    /// 返回指向压入值的指针
+    /// # Safety
+    /// - 使用裸指针写入内核栈
+    /// - 调用者必须保证栈空间足够
     #[allow(unused)]
     pub fn push_on_top<T>(&self, value: T) -> *mut T
     where
