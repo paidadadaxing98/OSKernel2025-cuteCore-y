@@ -37,7 +37,6 @@ pub mod riscv;
 pub use riscv::{
     // 启动与初始化
     bootstrap_init,
-    machine_init,
     // 配置常量
     config::{
         BLOCK_SZ, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE, PAGE_SIZE_BITS,
@@ -45,6 +44,7 @@ pub use riscv::{
     },
     // 内核栈管理
     kernel_stack::{kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack},
+    machine_init,
     // SBI 系统调用
     sbi::{console_flush, console_getchar, console_putchar, shutdown},
     // 任务上下文切换
@@ -56,7 +56,8 @@ pub use riscv::{
     // Trap 相关
     trap::{context::TrapContext, trap_handler, trap_return},
     // 页表类型别名
-    PageTableEntryImpl, PageTableImpl,
+    PageTableEntryImpl,
+    PageTableImpl,
 };
 
 #[cfg(feature = "loongarch")]
@@ -66,7 +67,6 @@ pub mod loongarch;
 pub use loongarch::{
     // 启动与初始化
     bootstrap_init,
-    machine_init,
     // 配置常量
     config::{
         HIGH_BASE_EIGHT, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, MEMORY_HIGH_BASE,
@@ -75,6 +75,7 @@ pub use loongarch::{
     },
     // 内核栈管理
     kernel_stack::{kstack_alloc, KernelStack},
+    machine_init,
     // SBI 系统调用
     sbi::{console_flush, console_getchar, console_putchar, shutdown},
     // 中断屏蔽管理
@@ -84,5 +85,6 @@ pub use loongarch::{
     // Trap 相关
     trap::{context::TrapContext, trap_handler, trap_return},
     // 页表类型别名
-    PageTableEntryImpl, PageTableImpl,
+    PageTableEntryImpl,
+    PageTableImpl,
 };

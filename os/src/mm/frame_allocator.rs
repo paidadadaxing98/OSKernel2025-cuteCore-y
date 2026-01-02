@@ -23,16 +23,12 @@
 //! - 被回收的页帧只能回收一次
 //! - `FrameTracker` 生命周期与页帧占用严格绑定
 
-
-
 use super::{PhysAddr, PhysPageNum};
 use crate::hal::MEMORY_END;
 use crate::sync::UPIntrFreeCell;
 use alloc::vec::Vec;
 use core::fmt::{self, Debug, Formatter};
 use lazy_static::*;
-
-
 
 lazy_static! {
     /// 全局物理页帧分配器。
@@ -46,7 +42,6 @@ lazy_static! {
     pub static ref FRAME_ALLOCATOR: UPIntrFreeCell<FrameAllocatorImpl> =
         unsafe { UPIntrFreeCell::new(FrameAllocatorImpl::new()) };
 }
-
 
 /// 初始化物理页帧分配器。
 ///
@@ -68,7 +63,6 @@ pub fn init_frame_allocator() {
     );
 }
 
-
 /// 分配一个物理页帧。
 ///
 /// 成功时返回一个 `FrameTracker`，
@@ -80,7 +74,6 @@ pub fn frame_alloc() -> Option<FrameTracker> {
         .map(FrameTracker::new)
 }
 
-
 /// 一次性分配多个连续页帧。
 ///
 /// 返回的每个页帧都由对应的 `FrameTracker` 管理。
@@ -91,7 +84,6 @@ pub fn frame_alloc_more(num: usize) -> Option<Vec<FrameTracker>> {
         .map(|x| x.iter().map(|&t| FrameTracker::new(t)).collect())
 }
 
-
 /// 回收一个物理页帧。
 ///
 /// 通常由 `FrameTracker::drop` 自动调用，
@@ -99,7 +91,6 @@ pub fn frame_alloc_more(num: usize) -> Option<Vec<FrameTracker>> {
 pub fn frame_dealloc(ppn: PhysPageNum) {
     FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
 }
-
 
 /// 页帧跟踪器（RAII 封装）。
 ///
@@ -141,7 +132,6 @@ impl Drop for FrameTracker {
         frame_dealloc(self.ppn);
     }
 }
-
 
 /// 页帧分配器抽象接口。
 ///

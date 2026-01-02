@@ -22,7 +22,6 @@
 //! - 调用 `__switch` 后，当前任务上下文存储在 `current_task_cx_ptr`，下一个任务上下文加载到 CPU。
 //! - 汇编实现保证寄存器和栈状态完整恢复，不破坏内核内存安全。
 
-
 use crate::task::TaskContext;
 use core::arch::global_asm;
 

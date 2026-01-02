@@ -25,7 +25,6 @@
 //!   并生成覆盖完整请求长度的切片序列。
 //! - **单向依赖**：该模块仅依赖底层的 `hal` 和 `mm` 模块，不应产生向上依赖，以维持内核分层结构。
 
-
 use crate::hal::{PageTableEntryImpl, PageTableImpl};
 use crate::mm::{MapPermission, PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
 use alloc::string::String;
@@ -119,7 +118,6 @@ pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
         .unwrap()
         .get_mut()
 }
-
 
 /// 用户缓冲区容器
 ///

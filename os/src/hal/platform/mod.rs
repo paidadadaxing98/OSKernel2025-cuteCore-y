@@ -11,7 +11,6 @@
 //! # Safety
 //! - 被使用的模块设计底层 MMIO，时钟等关键数据，必须保证数据真实可靠
 
-
 #[cfg(feature = "riscv")]
 pub mod riscv;
 

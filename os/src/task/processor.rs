@@ -24,8 +24,6 @@
 //! - `PROCESSOR.current` 与实际正在 CPU 上运行的任务保持一致
 //! - 上下文切换期间，不得并发访问任务或处理器状态
 
-
-
 use crate::hal::{TrapContext, __switch};
 use crate::sync::UPIntrFreeCell;
 use crate::task::manager::fetch_task;

@@ -27,11 +27,9 @@
 //! - 页表条目有效性（V 位）与权限位保持一致。
 //! - 激活页表后，SATP 寄存器反映根页表地址，并完成 TLB 同步。
 
-
-
 use crate::mm::{
-    frame_alloc, FrameTracker, MapPermission, PageTable, PhysAddr, PhysPageNum,
-    VirtAddr, VirtPageNum,
+    frame_alloc, FrameTracker, MapPermission, PageTable, PhysAddr, PhysPageNum, VirtAddr,
+    VirtPageNum,
 };
 use alloc::vec;
 use alloc::vec::Vec;
@@ -54,7 +52,6 @@ bitflags! {
         const D = 1 << 7;
     }
 }
-
 
 /// 单个页表条目
 ///
@@ -83,7 +80,6 @@ pub struct PageTableEntry {
 }
 
 impl PageTableEntry {
-
     /// 创建一个新的 PTE
     pub fn new(ppn: PhysPageNum, flags: PTEFlags) -> Self {
         PageTableEntry {
@@ -126,7 +122,6 @@ impl PageTableEntry {
         (self.flags() & PTEFlags::X) != PTEFlags::empty()
     }
 }
-
 
 /// SV39 页表实现
 ///

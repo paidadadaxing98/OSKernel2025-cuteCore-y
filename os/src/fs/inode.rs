@@ -51,6 +51,7 @@ lazy_static! {
     };
 }
 
+/// 列举出在根目录下的所有文件和目录
 pub fn list_apps() {
     println!("/**** APPS ****");
     for app in ROOT_INODE.ls() {

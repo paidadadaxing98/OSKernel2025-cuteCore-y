@@ -20,7 +20,6 @@
 //! - ELF 加载区域假设合法且与用户栈、trap_context 不冲突
 //! - Framed 类型映射的页帧在 `MapArea` 内部追踪，确保不会泄漏
 
-
 use crate::hal::{PageTableEntryImpl, PageTableImpl, MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE};
 use crate::mm::address::VPNRange;
 use crate::mm::{
@@ -75,7 +74,6 @@ pub struct MemorySet<T: PageTable> {
 }
 
 impl<T: PageTable> MemorySet<T> {
-
     /// 创建一个空 MemorySet，不包含任何区域
     pub fn new_bare() -> Self {
         Self {
@@ -140,7 +138,6 @@ impl<T: PageTable> MemorySet<T> {
 
         // 映射跳板
         memory_set.map_trampoline();
-
 
         // 映射内核段
         memory_set.push(
@@ -326,7 +323,6 @@ pub struct MapArea {
 }
 
 impl MapArea {
-
     /// 构建 MapArea，帧未分配
     pub fn new(
         start_va: VirtAddr,
@@ -441,7 +437,6 @@ pub enum MapType {
     /// 映射关系为线性偏移， ppn = vpn + offset
     Linear(isize),
 }
-
 
 bitflags! {
     /// 页映射权限

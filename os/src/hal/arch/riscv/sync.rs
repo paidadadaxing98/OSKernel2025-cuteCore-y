@@ -22,7 +22,6 @@
 //! - 第一次屏蔽前的 SIE 状态在嵌套退出最外层时恢复。
 //! - 多次嵌套 enter/exit 保证中断状态一致。
 
-
 use crate::sync::UPSafeCellRaw;
 use lazy_static::lazy_static;
 use riscv::register::sstatus;

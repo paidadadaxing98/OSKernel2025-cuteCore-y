@@ -23,7 +23,6 @@
 //! - 依赖 `TRAMPOLINE` 虚拟地址进行代码跳转，必须保证该内存区域在所有页表中正确映射。
 //! - 处理 Trap 期间必须严格管理中断嵌套（SIE 位）。
 
-
 pub mod context;
 
 use crate::hal::TRAMPOLINE;
@@ -44,14 +43,12 @@ pub use context::TrapContext;
 // 引入汇编代码，包含寄存器保存与恢复的具体实现。
 global_asm!(include_str!("trap.S"));
 
-
 /// 初始化 Trap 模块。
 ///
 /// 设置内核态的 Trap 入口，确保内核在执行时如果发生异常能被正确捕捉。
 pub fn init() {
     set_kernel_trap_entry();
 }
-
 
 /// 设置内核态陷阱入口。
 ///
@@ -69,7 +66,6 @@ fn set_kernel_trap_entry() {
         sscratch::write(trap_from_kernel as usize);
     }
 }
-
 
 /// 处理来自内核态的陷阱。
 ///
@@ -130,7 +126,6 @@ fn set_user_trap_entry() {
         stvec::write(TRAMPOLINE, TrapMode::Direct);
     }
 }
-
 
 /// 用户态 Trap 的总调度器。
 ///
@@ -197,7 +192,6 @@ pub fn trap_handler() -> ! {
     }
     trap_return();
 }
-
 
 /// 返回用户态。
 ///

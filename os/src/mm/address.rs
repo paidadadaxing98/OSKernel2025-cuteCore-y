@@ -30,7 +30,6 @@
 //! - `SimpleRange<T>`：泛型范围类型，支持 `StepByOne` 类型迭代。
 //! - `VPNRange`：`VirtPageNum` 的简单范围类型。
 
-
 use crate::hal::{PageTableEntryImpl, PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
 
@@ -133,15 +132,25 @@ impl From<VirtPageNum> for usize {
 /// VirtAddr 方法
 impl VirtAddr {
     /// 获取包含当前地址的页号
-    pub fn floor(&self) -> VirtPageNum { VirtPageNum(self.0 / PAGE_SIZE) }
+    pub fn floor(&self) -> VirtPageNum {
+        VirtPageNum(self.0 / PAGE_SIZE)
+    }
     /// 获取当前地址所在页向上取整的页号
     pub fn ceil(&self) -> VirtPageNum {
-        if self.0 == 0 { VirtPageNum(0) } else { VirtPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE) }
+        if self.0 == 0 {
+            VirtPageNum(0)
+        } else {
+            VirtPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE)
+        }
     }
     /// 页内偏移
-    pub fn page_offset(&self) -> usize { self.0 & (PAGE_SIZE - 1) }
+    pub fn page_offset(&self) -> usize {
+        self.0 & (PAGE_SIZE - 1)
+    }
     /// 判断地址是否页对齐
-    pub fn aligned(&self) -> bool { self.page_offset() == 0 }
+    pub fn aligned(&self) -> bool {
+        self.page_offset() == 0
+    }
 }
 impl From<VirtAddr> for VirtPageNum {
     fn from(v: VirtAddr) -> Self {
@@ -157,12 +166,22 @@ impl From<VirtPageNum> for VirtAddr {
 
 /// PhysAddr 方法
 impl PhysAddr {
-    pub fn floor(&self) -> PhysPageNum { PhysPageNum(self.0 / PAGE_SIZE) }
-    pub fn ceil(&self) -> PhysPageNum {
-        if self.0 == 0 { PhysPageNum(0) } else { PhysPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE) }
+    pub fn floor(&self) -> PhysPageNum {
+        PhysPageNum(self.0 / PAGE_SIZE)
     }
-    pub fn page_offset(&self) -> usize { self.0 & (PAGE_SIZE - 1) }
-    pub fn aligned(&self) -> bool { self.page_offset() == 0 }
+    pub fn ceil(&self) -> PhysPageNum {
+        if self.0 == 0 {
+            PhysPageNum(0)
+        } else {
+            PhysPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE)
+        }
+    }
+    pub fn page_offset(&self) -> usize {
+        self.0 & (PAGE_SIZE - 1)
+    }
+    pub fn aligned(&self) -> bool {
+        self.page_offset() == 0
+    }
 }
 impl From<PhysAddr> for PhysPageNum {
     fn from(v: PhysAddr) -> Self {
@@ -175,7 +194,6 @@ impl From<PhysPageNum> for PhysAddr {
         Self(v.0 << PAGE_SIZE_BITS)
     }
 }
-
 
 /// VirtPageNum 方法
 impl VirtPageNum {
@@ -194,9 +212,13 @@ impl VirtPageNum {
 /// PhysAddr/PhysPageNum 内存访问方法
 impl PhysAddr {
     /// 获取物理地址的不可变引用
-    pub fn get_ref<T>(&self) -> &'static T { unsafe { (self.0 as *const T).as_ref().unwrap() } }
+    pub fn get_ref<T>(&self) -> &'static T {
+        unsafe { (self.0 as *const T).as_ref().unwrap() }
+    }
     /// 获取物理地址的可变引用
-    pub fn get_mut<T>(&self) -> &'static mut T { unsafe { (self.0 as *mut T).as_mut().unwrap() } }
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
 }
 impl PhysPageNum {
     pub fn get_pte_array<T>(&self) -> &'static mut [PageTableEntryImpl] {
@@ -214,55 +236,85 @@ impl PhysPageNum {
 }
 
 /// StepByOne trait，支持简单迭代
-pub trait StepByOne { fn step(&mut self); }
-impl StepByOne for VirtPageNum { fn step(&mut self) { self.0 += 1; } }
-impl StepByOne for PhysPageNum { fn step(&mut self) { self.0 += 1; } }
+pub trait StepByOne {
+    fn step(&mut self);
+}
+impl StepByOne for VirtPageNum {
+    fn step(&mut self) {
+        self.0 += 1;
+    }
+}
+impl StepByOne for PhysPageNum {
+    fn step(&mut self) {
+        self.0 += 1;
+    }
+}
 
 /// 泛型简单范围
 #[derive(Copy, Clone)]
 pub struct SimpleRange<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     l: T,
     r: T,
 }
 impl<T> SimpleRange<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     /// 创建一个新的范围
     pub fn new(start: T, end: T) -> Self {
         assert!(start <= end, "start {:?} > end {:?}!", start, end);
         Self { l: start, r: end }
     }
-    pub fn get_start(&self) -> T { self.l }
-    pub fn get_end(&self) -> T { self.r }
+    pub fn get_start(&self) -> T {
+        self.l
+    }
+    pub fn get_end(&self) -> T {
+        self.r
+    }
 }
 impl<T> IntoIterator for SimpleRange<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     type Item = T;
     type IntoIter = SimpleRangeIterator<T>;
-    fn into_iter(self) -> Self::IntoIter { SimpleRangeIterator::new(self.l, self.r) }
+    fn into_iter(self) -> Self::IntoIter {
+        SimpleRangeIterator::new(self.l, self.r)
+    }
 }
 
 /// SimpleRange 迭代器
 pub struct SimpleRangeIterator<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     current: T,
     end: T,
 }
 impl<T> SimpleRangeIterator<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
-    pub fn new(l: T, r: T) -> Self { Self { current: l, end: r } }
+    pub fn new(l: T, r: T) -> Self {
+        Self { current: l, end: r }
+    }
 }
 impl<T> Iterator for SimpleRangeIterator<T>
-where T: StepByOne + Copy + PartialEq + PartialOrd + Debug
+where
+    T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
     type Item = T;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current == self.end { None } else { let t = self.current; self.current.step(); Some(t) }
+        if self.current == self.end {
+            None
+        } else {
+            let t = self.current;
+            self.current.step();
+            Some(t)
+        }
     }
 }
 

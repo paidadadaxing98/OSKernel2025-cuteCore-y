@@ -26,9 +26,9 @@
 //! - 日志输出不得引起递归打印或死锁
 
 use crate::hal::{console_flush, console_putchar};
+use crate::task::current_task;
 use core::fmt::{self, Write};
 use log::{Level, LevelFilter, Log, Metadata, Record};
-use crate::task::current_task;
 
 /// 标准输出结构体。
 ///
@@ -37,7 +37,6 @@ use crate::task::current_task;
 struct Stdout;
 
 impl Write for Stdout {
-
     /// 将字符串写入控制台。
     ///
     /// 字符逐个通过 `console_putchar` 输出，
@@ -125,7 +124,6 @@ pub fn init() {
 /// 是内核中所有日志输出的统一入口。
 struct Logger;
 
-
 impl Log for Logger {
     /// 判断某条日志是否启用。
     ///
@@ -156,7 +154,7 @@ impl Log for Logger {
                     .as_ref()
                     .map_or(usize::MAX, |res| res.tid);
                 println!("pid {}: {}", tid, record.args())
-            },
+            }
             None => println!("kernel: {}", record.args()),
         }
 

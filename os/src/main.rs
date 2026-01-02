@@ -16,6 +16,7 @@ mod lang_items;
 mod task;
 mod timer;
 
+/// 清理 BSS 段，将其全部置零
 fn clear_bss() {
     extern "C" {
         fn sbss();

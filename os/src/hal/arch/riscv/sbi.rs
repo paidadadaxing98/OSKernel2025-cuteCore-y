@@ -21,7 +21,6 @@
 //! - `sbi_call` 返回值符合 SBI ABI 规范，未定义情况不会破坏系统状态。
 //! - 控制台输出和输入不会改变内核栈或关键寄存器状态。
 
-
 #![allow(unused)]
 
 use core::arch::asm;
@@ -36,7 +35,6 @@ const SBI_REMOTE_FENCE_I: usize = 5;
 const SBI_REMOTE_SFENCE_VMA: usize = 6;
 const SBI_REMOTE_SFENCE_VMA_ASID: usize = 7;
 const SBI_SHUTDOWN: usize = 8;
-
 
 /// 通用 SBI 调用封装函数
 ///
@@ -66,7 +64,6 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
     ret
 }
 
-
 /// 设置定时器
 ///
 /// # Arguments
@@ -76,7 +73,6 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
 pub fn set_timer(timer: usize) {
     sbi_call(SBI_SET_TIMER, timer, 0, 0);
 }
-
 
 /// 控制台输出一个字符
 ///
@@ -98,12 +94,10 @@ pub fn console_getchar() -> usize {
     sbi_call(SBI_CONSOLE_GETCHAR, 0, 0, 0)
 }
 
-
 /// 刷新控制台缓冲区
 ///
 /// 当前实现为空函数，SBI 不提供显式刷新接口。
 pub fn console_flush() {}
-
 
 /// 关机系统
 ///

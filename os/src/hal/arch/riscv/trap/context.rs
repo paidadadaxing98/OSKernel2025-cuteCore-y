@@ -28,11 +28,7 @@
 //! - `TrapContext.kernel_sp`：内核栈顶地址，用于 trap 处理。
 //! - `TrapContext.trap_handler`：内核异常/中断处理函数入口地址。
 
-
-
-
 use riscv::register::sstatus::{read, Sstatus, SPP};
-
 
 /// 通用寄存器（General Purpose Registers）
 ///
@@ -86,7 +82,6 @@ pub struct GeneralRegs {
 //     pub fcsr: usize,
 // }
 
-
 /// 异常/中断上下文（TrapContext）
 ///
 /// TrapContext 保存了一个任务在发生 trap（异常或中断）时的全部 CPU 状态，
@@ -104,7 +99,6 @@ pub struct TrapContext {
 
     // 如果需要保存浮点寄存器，可以启用
     // pub float_regs: FloatRegs,
-
     /// sstatus CSR，用于保存中断状态、特权级等
     pub sstatus: Sstatus,
 
@@ -122,12 +116,10 @@ pub struct TrapContext {
 }
 
 impl TrapContext {
-
     /// 设置用户态栈指针
     pub fn set_sp(&mut self, sp: usize) {
         self.general_regs.sp = sp;
     }
-
 
     /// 初始化用户任务上下文
     ///

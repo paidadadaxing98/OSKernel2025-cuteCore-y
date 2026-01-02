@@ -23,11 +23,9 @@
 //! - 内核堆空间在初始化后不可移动
 //! - 堆分配器在整个系统生命周期内保持有效
 
-
 use crate::hal::KERNEL_HEAP_SIZE;
 use buddy_system_allocator::LockedHeap;
 use core::ptr::addr_of_mut;
-
 
 /// 内核全局堆分配器。
 ///
@@ -39,7 +37,6 @@ use core::ptr::addr_of_mut;
 /// - 所有堆分配操作必须通过该分配器完成
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
-
 
 /// 堆内存分配失败处理函数。
 ///
@@ -74,7 +71,6 @@ pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
 /// - 该静态内存仅在 `init_heap` 中被初始化
 /// - 初始化完成后，其管理权完全交由堆分配器
 static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
-
 
 /// 初始化内核堆。
 ///

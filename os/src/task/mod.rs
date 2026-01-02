@@ -140,14 +140,14 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 
 lazy_static! {
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
-        let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();
-        let v = inode.read_all();
-        ProcessControlBlock::new(v.as_slice())
+        let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();  // 已仅读模式打开 initproc 文件
+        let v = inode.read_all();   // 读取 initproc 文件的全部内容到内存中
+        ProcessControlBlock::new(v.as_slice())  // 创建 initproc 进程控制块
     };
 }
 
 pub fn add_initproc() {
-    let _initproc = INITPROC.clone();
+    let _initproc = INITPROC.clone(); // 提前克隆 INITPROC，确保其在后续使用中不会被释放
 }
 
 pub fn check_signals_of_current() -> Option<(i32, &'static str)> {

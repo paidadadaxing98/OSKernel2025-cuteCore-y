@@ -40,7 +40,6 @@ lazy_static! {
         unsafe { UPIntrFreeCell::new(RecycleAllocator::new()) };
 }
 
-
 /// 回收式内核栈分配器
 ///
 /// # Fields

@@ -1,7 +1,4 @@
 const SYSCALL_DUP: usize = 24;
-const SYSCALL_CONNECT: usize = 29;
-const SYSCALL_LISTEN: usize = 30;
-const SYSCALL_ACCEPT: usize = 31;
 const SYSCALL_OPEN: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
 const SYSCALL_PIPE: usize = 59;
@@ -28,10 +25,6 @@ const SYSCALL_SEMAPHORE_DOWN: usize = 1022;
 const SYSCALL_CONDVAR_CREATE: usize = 1030;
 const SYSCALL_CONDVAR_SIGNAL: usize = 1031;
 const SYSCALL_CONDVAR_WAIT: usize = 1032;
-const SYSCALL_FRAMEBUFFER: usize = 2000;
-const SYSCALL_FRAMEBUFFER_FLUSH: usize = 2001;
-const SYSCALL_EVENT_GET: usize = 3000;
-const SYSCALL_KEY_PRESSED: usize = 3001;
 
 mod fs;
 mod process;

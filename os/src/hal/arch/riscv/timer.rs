@@ -23,7 +23,6 @@
 //! - `set_next_trigger` 始终设置下一次触发在未来时间
 //! - `get_time()` 返回单调递增时间戳
 
-
 use super::sbi::set_timer;
 use crate::hal::CLOCK_FREQ;
 use riscv::register::time;
