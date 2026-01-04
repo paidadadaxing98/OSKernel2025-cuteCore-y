@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::fs::{open_file, OpenFlags};
 use crate::mm::{translated_ref, translated_refmut, translated_str};
 use crate::task::{
@@ -19,13 +21,10 @@ pub fn sys_yield() -> isize {
     0
 }
 
-pub fn sys_get_time() -> isize {
-    get_time_ms() as isize
-}
-
 pub fn sys_getpid() -> isize {
     current_task().unwrap().process.upgrade().unwrap().getpid() as isize
 }
+
 
 pub fn sys_fork() -> isize {
     let current_process = current_process();

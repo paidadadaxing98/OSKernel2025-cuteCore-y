@@ -93,9 +93,6 @@ pub fn exit(exit_code: i32) -> ! {
 pub fn yield_() -> isize {
     sys_yield()
 }
-pub fn get_time() -> isize {
-    sys_get_time()
-}
 pub fn getpid() -> isize {
     sys_getpid()
 }
@@ -129,15 +126,12 @@ pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
     }
 }
 
-pub fn waitpid_nb(pid: usize, exit_code: &mut i32) -> isize {
-    sys_waitpid(pid as isize, exit_code as *mut _)
+pub fn getcwd(buf: &mut [u8]) -> isize {
+    sys_getcwd(buf)
 }
 
-pub fn sleep(period_ms: usize) {
-    let start = sys_get_time();
-    while sys_get_time() < start + period_ms as isize {
-        sys_yield();
-    }
+pub fn chdir(path: &str) -> isize {
+    sys_chdir(path)
 }
 
 /// Action for a signal

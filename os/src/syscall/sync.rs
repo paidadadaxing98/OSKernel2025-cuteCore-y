@@ -33,11 +33,13 @@
 //! - 所有系统调用成功时返回 `0` 或合法资源 ID
 //! - 阻塞类系统调用会触发任务切换
 //! - 不负责对象的显式销毁（依赖进程退出时统一回收）
+
+#![allow(unused)]
+
 use crate::sync::{Condvar, Mutex, MutexBlocking, MutexSpin, Semaphore};
 use crate::task::{block_current_and_run_next, current_process, current_task};
 use crate::timer::{add_timer, get_time_ms};
 use alloc::sync::Arc;
-
 
 /// 使当前任务休眠指定的毫秒数
 ///
@@ -56,7 +58,6 @@ pub fn sys_sleep(ms: usize) -> isize {
     block_current_and_run_next();
     0
 }
-
 
 /// 创建一个互斥锁
 ///
@@ -93,7 +94,6 @@ pub fn sys_mutex_create(blocking: bool) -> isize {
     }
 }
 
-
 /// 对指定互斥锁加锁
 ///
 /// ## Behavior
@@ -125,7 +125,6 @@ pub fn sys_mutex_unlock(mutex_id: usize) -> isize {
     0
 }
 
-
 /// 创建一个信号量
 ///
 /// ## Parameters
@@ -154,7 +153,6 @@ pub fn sys_semaphore_create(res_count: usize) -> isize {
     id as isize
 }
 
-
 /// 对信号量执行 V 操作（up）
 ///
 /// ## Behavior
@@ -182,7 +180,6 @@ pub fn sys_semaphore_down(sem_id: usize) -> isize {
     0
 }
 
-
 /// 创建一个条件变量
 ///
 /// ## Returns
@@ -208,7 +205,6 @@ pub fn sys_condvar_create() -> isize {
     id as isize
 }
 
-
 /// 唤醒一个等待在条件变量上的任务
 ///
 /// ## Behavior
@@ -221,7 +217,6 @@ pub fn sys_condvar_signal(condvar_id: usize) -> isize {
     condvar.signal();
     0
 }
-
 
 /// 在条件变量上等待，并释放指定互斥锁
 ///

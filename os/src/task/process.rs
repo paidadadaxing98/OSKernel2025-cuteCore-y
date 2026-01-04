@@ -47,7 +47,6 @@
 //!   - 管理文件描述符和线程 ID 分配
 //! - 任务访问：通过 `get_task(tid)` 获取特定线程
 
-
 use crate::fs::{File, Stdin, Stdout};
 use crate::hal::{trap_handler, PageTableImpl, TrapContext};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
@@ -56,7 +55,7 @@ use crate::task::manager::{add_task, insert_into_pid2process};
 use crate::task::pid::{pid_alloc, PidHandle, RecycleAllocator};
 use crate::task::signal::SignalFlags;
 use crate::task::task::TaskControlBlock;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -79,6 +78,7 @@ pub struct ProcessControlBlockInner {
     pub parent: Option<Weak<ProcessControlBlock>>,
     pub children: Vec<Arc<ProcessControlBlock>>,
     pub exit_code: i32,
+    pub cwd: String,
     pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>,
     pub signals: SignalFlags,
     pub tasks: Vec<Option<Arc<TaskControlBlock>>>,
@@ -115,6 +115,7 @@ impl ProcessControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    cwd: "/".to_string(),
                     fd_table: vec![
                         // 0 -> stdin
                         Some(Arc::new(Stdin)),
@@ -168,19 +169,21 @@ impl ProcessControlBlock {
     /// 执行新程序（仅支持单线程进程）
     pub fn exec(self: &Arc<Self>, elf_data: &[u8], args: Vec<String>) {
         assert_eq!(self.inner_exclusive_access().thread_count(), 1);
-        // memory_set with elf program headers/trampoline/trap context/user stack
+        // 通过 ELF 数据创建新的地址空间，获得新的用户栈基址和程序入口点
         let (memory_set, ustack_base, entry_point) = MemorySet::from_elf(elf_data);
         let new_token = memory_set.token();
-        // substitute memory_set
+        // 更新进程地址空间
         self.inner_exclusive_access().memory_set = memory_set;
-        // then we alloc user resource for main thread again
-        // since memory_set has been changed
+
+        // 因为地址空间已经更改，需要重新为主线程分配用户资源
         let task = self.inner_exclusive_access().get_task(0);
         let mut task_inner = task.inner_exclusive_access();
+        // 更新用户栈基址
         task_inner.res.as_mut().unwrap().ustack_base = ustack_base;
+        // 分配用户资源（用户栈 + trap 上下文）
         task_inner.res.as_mut().unwrap().alloc_user_res();
         task_inner.trap_cx_ppn = task_inner.res.as_mut().unwrap().trap_cx_ppn();
-        // push arguments on user stack
+        // 把参数压入用户栈
         let mut user_sp = task_inner.res.as_mut().unwrap().ustack_top();
         user_sp -= (args.len() + 1) * core::mem::size_of::<usize>();
         let argv_base = user_sp;
@@ -203,9 +206,9 @@ impl ProcessControlBlock {
             }
             *translated_refmut(new_token, p as *mut u8) = 0;
         }
-        // make the user_sp aligned to 8B for k210 platform
+        // 让 user_sp 对齐到 8 字节（k210 平台要求）
         user_sp -= user_sp % core::mem::size_of::<usize>();
-        // initialize trap_cx
+        // 初始化 trap 上下文
         let mut trap_cx = TrapContext::app_init_context(
             entry_point,
             user_sp,
@@ -245,6 +248,7 @@ impl ProcessControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: 0,
+                    cwd: parent.cwd.clone(),
                     fd_table: new_fd_table,
                     signals: SignalFlags::empty(),
                     tasks: Vec::new(),

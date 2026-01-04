@@ -48,6 +48,7 @@ pub fn rust_main() -> ! {
     hal::machine_init();
     println!("machine init completed.");
     fs::list_apps();
+    println!("File system initialized.");
     task::add_initproc();
     println!("Initialization complete.");
     task::run_tasks();

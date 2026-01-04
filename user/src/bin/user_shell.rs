@@ -1,214 +1,182 @@
 #![no_std]
 #![no_main]
-#![allow(clippy::println_empty_string)]
 
 extern crate alloc;
-
-#[macro_use]
 extern crate user;
+
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+
+use user::console::getchar;
+use user::{close, dup, exec, fork, open, pipe, println, print, waitpid, OpenFlags};
 
 const LF: u8 = 0x0au8;
 const CR: u8 = 0x0du8;
 const DL: u8 = 0x7fu8;
 const BS: u8 = 0x08u8;
-const LINE_START: &str = ">> ";
 
-use alloc::string::String;
-use alloc::vec::Vec;
-use user::console::getchar;
-use user::{OpenFlags, close, dup, exec, fork, open, pipe, waitpid};
-
-#[derive(Debug)]
-struct ProcessArguments {
+/// 存储单个进程的参数和重定向信息
+struct Command {
+    args_copy: Vec<String>, // 拥有所有权，防止悬垂指针
+    args_addr: Vec<*const u8>,  // 传递给内核的指针数组
     input: String,
     output: String,
-    args_copy: Vec<String>,
-    args_addr: Vec<*const u8>,
 }
 
-impl ProcessArguments {
-    pub fn new(command: &str) -> Self {
-        let args: Vec<_> = command.split(' ').collect();
-        let mut args_copy: Vec<String> = args
-            .iter()
-            .filter(|&arg| !arg.is_empty())
-            .map(|&arg| {
-                let mut string = String::new();
-                string.push_str(arg);
-                string.push('\0');
-                string
-            })
+impl Command {
+    pub fn new(cmd_str: &str) -> Self {
+        let mut args: Vec<String> = cmd_str
+            .split_whitespace()
+            .map(|arg| format!("{}\0", arg))
             .collect();
 
-        // redirect input
         let mut input = String::new();
-        if let Some((idx, _)) = args_copy
-            .iter()
-            .enumerate()
-            .find(|(_, arg)| arg.as_str() == "<\0")
-        {
-            input = args_copy[idx + 1].clone();
-            args_copy.drain(idx..=idx + 1);
+        let output = String::new();
+
+        // 提取并移除输入重定向 <
+        if let Some(i) = args.iter().position(|arg| arg == "<\0") {
+            if i + 1 < args.len() {
+                input = args[i + 1].clone();
+                args.drain(i..=i + 1);
+            }
         }
 
-        // redirect output
-        let mut output = String::new();
-        if let Some((idx, _)) = args_copy
-            .iter()
-            .enumerate()
-            .find(|(_, arg)| arg.as_str() == ">\0")
-        {
-            output = args_copy[idx + 1].clone();
-            args_copy.drain(idx..=idx + 1);
-        }
-
-        let mut args_addr: Vec<*const u8> = args_copy.iter().map(|arg| arg.as_ptr()).collect();
-        args_addr.push(core::ptr::null::<u8>());
+        // 提取并移除输出重定向 >
+        let mut args_addr: Vec<*const u8> = args.iter().map(|arg| arg.as_ptr()).collect();
+        args_addr.push(core::ptr::null());
 
         Self {
+            args_copy: args,
+            args_addr,
             input,
             output,
-            args_copy,
-            args_addr,
         }
     }
 }
 
+/// 将文件描述符重定向到标准输入/输出
+fn redirect(old_fd: usize, new_fd: usize) {
+    close(new_fd);
+    dup(old_fd);
+    close(old_fd);
+}
+
+/// 处理文件重定向逻辑
+fn handle_file_redirection(input: &str, output: &str) {
+    if !input.is_empty() {
+        // 去掉末尾的 \0 进行 open 调用
+        let path = &input[..input.len() - 1];
+        let fd = open(path, OpenFlags::RDONLY);
+        if fd != -1 {
+            redirect(fd as usize, 0);
+        }
+    }
+    if !output.is_empty() {
+        let path = &output[..output.len() - 1];
+        let fd = open(path, OpenFlags::CREATE | OpenFlags::WRONLY);
+        if fd != -1 {
+            redirect(fd as usize, 1);
+        }
+    }
+}
+
+
 #[no_mangle]
-pub fn main() -> i32 {
-    println!("Rust user shell");
-    let mut line: String = String::new();
-    print!("{}", LINE_START);
+fn main() -> i32{
+    println!("Rust Shell Initialized.");
+    let mut line = String::new();
+
     loop {
-        let c = getchar();
-        match c {
-            LF | CR => {
-                println!("");
-                if !line.is_empty() {
-                    let splited: Vec<_> = line.as_str().split('|').collect();
-                    let process_arguments_list: Vec<_> = splited
-                        .iter()
-                        .map(|&cmd| ProcessArguments::new(cmd))
-                        .collect();
-                    let mut valid = true;
-                    for (i, process_args) in process_arguments_list.iter().enumerate() {
-                        if i == 0 {
-                            if !process_args.output.is_empty() {
-                                valid = false;
-                            }
-                        } else if i == process_arguments_list.len() - 1 {
-                            if !process_args.input.is_empty() {
-                                valid = false;
-                            }
-                        } else if !process_args.output.is_empty() || !process_args.input.is_empty()
-                        {
-                            valid = false;
-                        }
+        print!(">> ");
+        line.clear();
+
+        loop {
+            let c = getchar();
+            match c {
+               CR | LF => {
+                   println!(" ");
+                   break;
+               }
+                BS | DL => {
+                    if !line.is_empty() {
+                        print!("{}", BS as char);
+                        print!(" ");
+                        print!("{}", BS as char);
+                        line.pop();
                     }
-                    if process_arguments_list.len() == 1 {
-                        valid = true;
-                    }
-                    if !valid {
-                        println!("Invalid command: Inputs/Outputs cannot be correctly binded!");
-                    } else {
-                        // create pipes
-                        let mut pipes_fd: Vec<[usize; 2]> = Vec::new();
-                        if !process_arguments_list.is_empty() {
-                            for _ in 0..process_arguments_list.len() - 1 {
-                                let mut pipe_fd = [0usize; 2];
-                                pipe(&mut pipe_fd);
-                                pipes_fd.push(pipe_fd);
-                            }
-                        }
-                        let mut children: Vec<_> = Vec::new();
-                        for (i, process_argument) in process_arguments_list.iter().enumerate() {
-                            let pid = fork();
-                            if pid == 0 {
-                                let input = &process_argument.input;
-                                let output = &process_argument.output;
-                                let args_copy = &process_argument.args_copy;
-                                let args_addr = &process_argument.args_addr;
-                                // redirect input
-                                if !input.is_empty() {
-                                    let input_fd = open(input.as_str(), OpenFlags::RDONLY);
-                                    if input_fd == -1 {
-                                        println!("Error when opening file {}", input);
-                                        return -4;
-                                    }
-                                    let input_fd = input_fd as usize;
-                                    close(0);
-                                    assert_eq!(dup(input_fd), 0);
-                                    close(input_fd);
-                                }
-                                // redirect output
-                                if !output.is_empty() {
-                                    let output_fd = open(
-                                        output.as_str(),
-                                        OpenFlags::CREATE | OpenFlags::WRONLY,
-                                    );
-                                    if output_fd == -1 {
-                                        println!("Error when opening file {}", output);
-                                        return -4;
-                                    }
-                                    let output_fd = output_fd as usize;
-                                    close(1);
-                                    assert_eq!(dup(output_fd), 1);
-                                    close(output_fd);
-                                }
-                                // receive input from the previous process
-                                if i > 0 {
-                                    close(0);
-                                    let read_end = pipes_fd.get(i - 1).unwrap()[0];
-                                    assert_eq!(dup(read_end), 0);
-                                }
-                                // send output to the next process
-                                if i < process_arguments_list.len() - 1 {
-                                    close(1);
-                                    let write_end = pipes_fd.get(i).unwrap()[1];
-                                    assert_eq!(dup(write_end), 1);
-                                }
-                                // close all pipe ends inherited from the parent process
-                                for pipe_fd in pipes_fd.iter() {
-                                    close(pipe_fd[0]);
-                                    close(pipe_fd[1]);
-                                }
-                                // execute new application
-                                if exec(args_copy[0].as_str(), args_addr.as_slice()) == -1 {
-                                    println!("Error when executing!");
-                                    return -4;
-                                }
-                                unreachable!();
-                            } else {
-                                children.push(pid);
-                            }
-                        }
-                        for pipe_fd in pipes_fd.iter() {
-                            close(pipe_fd[0]);
-                            close(pipe_fd[1]);
-                        }
-                        let mut exit_code: i32 = 0;
-                        for pid in children.into_iter() {
-                            let exit_pid = waitpid(pid as usize, &mut exit_code);
-                            assert_eq!(pid, exit_pid);
-                            //println!("Shell: Process {} exited with code {}", pid, exit_code);
-                        }
-                    }
-                    line.clear();
                 }
-                print!("{}", LINE_START);
-            }
-            BS | DL => {
-                if !line.is_empty() {
-                    print!("{}", BS as char);
-                    print!(" ");
-                    print!("{}", BS as char);
-                    line.pop();
+                _ => {
+                    print!("{}", c as char);
+                    line.push(c as char);
                 }
             }
-            _ => {
-                print!("{}", c as char);
-                line.push(c as char);
+        }
+
+        if line.is_empty() { continue; }
+
+        // 解析管道命令
+        let cmd_parts: Vec<&str> = line.split('|').collect();
+        let commands: Vec<Command> = cmd_parts.iter().map(|&s| Command::new(s)).collect();
+        let num_cmds = commands.len();
+
+        // 创建 N-1 个管道
+        let pipes: Vec<[usize; 2]> = (0..num_cmds.saturating_sub(1))
+            .map(|_| {
+                let mut fd = [0usize; 2];
+                pipe(&mut fd);
+                fd
+            })
+            .collect();
+
+        let mut children = Vec::new();
+
+
+
+        for (i, cmd) in commands.iter().enumerate() {
+            let pid = fork();
+            if pid == 0 {
+                // 子进程逻辑
+
+                // 1. 处理管道连接
+                if i > 0 {
+                    // 不是第一个命令，从上一个管道读
+                    redirect(pipes[i - 1][0], 0);
+                }
+                if i < num_cmds - 1 {
+                    // 不是最后一个命令，向当前管道写
+                    redirect(pipes[i][1], 1);
+                }
+
+                // 2. 处理文件重定向
+                handle_file_redirection(&cmd.input, &cmd.output);
+
+                // 3. 必须关闭子进程继承的所有管道 FD，否则读端会阻塞
+                for p in &pipes {
+                    close(p[0]);
+                    close(p[1]);
+                }
+
+                // 4. 执行
+                if exec(cmd.args_copy[0].as_str(), cmd.args_addr.as_slice()) == -1 {
+                    println!("Exec failed: {}", cmd.args_copy[0]);
+                }
+                unreachable!();
+            } else {
+                children.push(pid);
             }
+        }
+
+        // 父进程清理：关闭所有管道 FD
+        for p in pipes {
+            close(p[0]);
+            close(p[1]);
+        }
+
+        // 等待所有子进程
+        for pid in children {
+            let mut status = 0i32;
+            waitpid(pid as usize, &mut status);
         }
     }
 }

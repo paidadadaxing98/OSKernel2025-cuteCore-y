@@ -3,11 +3,12 @@
 
 extern crate user;
 
-use user::{exec, fork, wait, yield_};
+use user::{exec, fork, println, wait, yield_};
 
 #[no_mangle]
 fn main() -> i32 {
     if fork() == 0 {
+        println!("Exiting main...");
         exec("user_shell\0", &[core::ptr::null::<u8>()]);
     } else {
         loop {

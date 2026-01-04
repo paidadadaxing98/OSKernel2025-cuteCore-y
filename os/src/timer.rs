@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::hal::{get_clock_freq, get_time};
 use crate::sync::UPIntrFreeCell;
 use crate::task::{wakeup_task, TaskControlBlock};

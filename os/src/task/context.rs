@@ -28,9 +28,7 @@
 //! - `goto_trap_return`：
 //!   - 构造一个在首次调度时直接返回用户态的任务上下文
 
-
 use crate::hal::trap_return;
-
 
 /// 任务上下文
 ///

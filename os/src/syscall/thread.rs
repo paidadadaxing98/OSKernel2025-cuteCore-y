@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use crate::{
     hal::{trap_handler, TrapContext},
     mm::kernel_token,

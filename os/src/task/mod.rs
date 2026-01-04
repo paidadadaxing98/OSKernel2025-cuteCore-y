@@ -55,18 +55,17 @@ pub use context::TaskContext;
 use lazy_static::lazy_static;
 pub use manager::{add_task, pid2process, remove_from_pid2process, wakeup_task};
 pub use processor::{
-    current_process, current_task, current_trap_cx, current_trap_cx_user_va,
+    current_kstack_top, current_process, current_task, current_trap_cx, current_trap_cx_user_va,
     current_user_token, run_tasks, schedule, take_current_task,
 };
 
-use crate::fs::{open_file, OpenFlags};
+use crate::fs::{open_initproc, OpenFlags};
 use crate::hal::shutdown;
 use crate::task::pid::IDLE_PID;
 use crate::task::process::ProcessControlBlock;
 use crate::task::task::TaskUserRes;
 pub use signal::SignalFlags;
 pub use task::{TaskControlBlock, TaskStatus};
-
 
 /// 挂起当前任务并运行下一个任务
 ///
@@ -198,7 +197,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 lazy_static! {
     /// 系统初始化进程 PCB
     pub static ref INITPROC: Arc<ProcessControlBlock> = {
-        let inode = open_file("initproc", OpenFlags::RDONLY).unwrap();  // 已仅读模式打开 initproc 文件
+        let inode = open_initproc(OpenFlags::RDONLY).unwrap();  // 已仅读模式打开 initproc 文件
         let v = inode.read_all();   // 读取 initproc 文件的全部内容到内存中
         ProcessControlBlock::new(v.as_slice())  // 创建 initproc 进程控制块
     };

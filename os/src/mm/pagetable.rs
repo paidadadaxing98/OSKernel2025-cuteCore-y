@@ -132,6 +132,7 @@ impl UserBuffer {
     pub fn new(buffers: Vec<&'static mut [u8]>) -> Self {
         Self { buffers }
     }
+
     /// 计算缓冲区总长度
     pub fn len(&self) -> usize {
         let mut total: usize = 0;
@@ -139,6 +140,37 @@ impl UserBuffer {
             total += b.len();
         }
         total
+    }
+
+    pub fn write_string(&mut self, src: &str) -> usize {
+        let src_bytes = src.as_bytes();
+        let total_len = src_bytes.len() + 1;
+
+        let mut current_byte = 0;
+
+        for buffer in self.buffers.iter_mut() {
+            for byte in buffer.iter_mut() {
+                if current_byte < src_bytes.len() {
+                    *byte = src_bytes[current_byte];
+                    current_byte += 1;
+                } else if current_byte == src_bytes.len() {
+                    *byte = 0; // Null terminator
+                    current_byte += 1;
+                    return total_len; // Finished writing
+                } else {
+                    break; // No more bytes to write
+                }
+            }
+        }
+        current_byte
+    }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        if self.buffers.is_empty() || self.buffers[0].is_empty() {
+            core::ptr::null()
+        } else {
+            self.buffers[0].as_ptr()
+        }
     }
 }
 

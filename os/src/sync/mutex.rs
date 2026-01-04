@@ -34,7 +34,6 @@
 //!   - 若存在等待任务，唤醒其中一个
 //!   - 否则释放互斥锁
 
-
 use crate::sync::UPIntrFreeCell;
 use crate::task::{
     block_current_and_run_next, current_task, suspend_current_and_run_next, wakeup_task,
@@ -42,7 +41,6 @@ use crate::task::{
 };
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
-
 
 /// 互斥锁统一抽象接口
 ///
@@ -59,7 +57,6 @@ pub trait Mutex: Sync + Send {
     /// 释放互斥锁
     fn unlock(&self);
 }
-
 
 /// 自旋式互斥锁
 ///

@@ -31,11 +31,9 @@
 //! - 使用 RAII 保证中断屏蔽与恢复成对出现
 //! - 借用冲突将直接 panic（`RefCell` 语义）
 
-
 use crate::hal::INTR_MASKING_INFO;
 use core::cell::{RefCell, RefMut, UnsafeCell};
 use core::ops::{Deref, DerefMut};
-
 
 /// 基于 `UnsafeCell` 的最底层 UP 内部可变性封装
 ///
@@ -58,7 +56,6 @@ pub struct UPSafeCellRaw<T> {
 unsafe impl<T> Sync for UPSafeCellRaw<T> {}
 
 impl<T> UPSafeCellRaw<T> {
-
     /// 创建一个新的 `UPSafeCellRaw`
     ///
     /// ## Safety
@@ -78,7 +75,6 @@ impl<T> UPSafeCellRaw<T> {
     }
 }
 
-
 /// 在访问期间自动关闭中断的 UP 内部可变性封装
 ///
 /// ## Overview
@@ -92,10 +88,12 @@ pub struct UPIntrFreeCell<T> {
     inner: RefCell<T>,
 }
 
-
 /// 声明其在 UP + 中断屏蔽前提下是安全的
 unsafe impl<T> Sync for UPIntrFreeCell<T> {}
 
+/// 新增：声明其可以跨线程/核心安全转移
+/// 因为访问时会关闭中断，保证了独占性
+unsafe impl<T> Send for UPIntrFreeCell<T> {}
 
 /// `UPIntrFreeCell` 的可变借用守卫
 ///

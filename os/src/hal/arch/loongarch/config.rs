@@ -5,7 +5,6 @@
 
 #![allow(unused)]
 
-
 use crate::hal::platform;
 use core::arch::asm;
 
@@ -28,7 +27,6 @@ pub const USER_HEAP_SIZE: usize = 512 * 0x1000 * 0x1000; // 512 MB
 /// 内核堆大小，64 MB
 pub const KERNEL_HEAP_SIZE: usize = 64 * 0x1000 * 0x1000; // 64 MB
 
-
 /// 39 位虚拟地址
 pub const VA_BITS: usize = 39; // 39 bits for virtual address
 
@@ -37,10 +35,6 @@ pub const VA_MASK: usize = (1 << VA_BITS) - 1; // Mask for 39-bit virtual addres
 
 /// 虚拟地址空间大小，512 GB
 pub const VA_SPACE_SIZE: usize = 1 << VA_BITS; // 512 GB virtual address space
-
-
-
-
 
 // /// ========================
 // /// 内存与系统资源相关常量

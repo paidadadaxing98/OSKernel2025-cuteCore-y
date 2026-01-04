@@ -34,7 +34,6 @@
 //! - 模块本身不实现时间片或优先级策略
 //! - 调度策略可在此基础上扩展
 
-
 use crate::sync::UPIntrFreeCell;
 use crate::task::process::ProcessControlBlock;
 use crate::task::task::TaskStatus;
@@ -104,7 +103,6 @@ pub fn pid2process(pid: usize) -> Option<Arc<ProcessControlBlock>> {
     let map = PID2PCB.exclusive_access();
     map.get(&pid).map(Arc::clone)
 }
-
 
 /// 向 PID 映射表中插入一个进程
 ///

@@ -29,16 +29,12 @@
 //!   - 将当前任务加入等待队列并阻塞
 //!   - 是否切换任务由具体接口决定
 
-
-
-
 use crate::sync::{Mutex, UPIntrFreeCell};
 use crate::task::{
     block_current_and_run_next, block_current_task, current_task, wakeup_task, TaskContext,
     TaskControlBlock,
 };
 use alloc::{collections::VecDeque, sync::Arc};
-
 
 /// 条件变量
 ///
@@ -72,7 +68,6 @@ impl Condvar {
             },
         }
     }
-
 
     /// 唤醒一个等待在条件变量上的任务
     ///

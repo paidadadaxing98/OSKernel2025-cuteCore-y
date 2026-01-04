@@ -34,7 +34,7 @@ use crate::task::{
 use core::arch::{asm, global_asm};
 use riscv::register::mtvec::TrapMode;
 use riscv::register::scause::{Exception, Interrupt, Trap};
-use riscv::register::{scause, sie, sscratch, sstatus, stval, stvec};
+use riscv::register::{scause, sepc, sie, sscratch, sstatus, stval, stvec};
 
 use crate::hal::arch::riscv::timer::set_next_trigger;
 use crate::timer::check_timer;
@@ -89,8 +89,9 @@ pub fn trap_from_kernel(_trap_cx: &TrapContext) {
         }
         _ => {
             panic!(
-                "Unsupported trap from kernel: {:?}, stval = {:#x}!",
+                "Unsupported trap from kernel: {:?},sepc = {:#x}, stval = {:#x}!",
                 scause.cause(),
+                sepc::read(),
                 stval
             );
         }
@@ -151,7 +152,14 @@ pub fn trap_handler() -> ! {
 
             let result = syscall(
                 cx.general_regs.a7,
-                [cx.general_regs.a0, cx.general_regs.a1, cx.general_regs.a2],
+                [
+                    cx.general_regs.a0,
+                    cx.general_regs.a1,
+                    cx.general_regs.a2,
+                    cx.general_regs.a3,
+                    cx.general_regs.a4,
+                    cx.general_regs.a5,
+                ],
             );
 
             // 重新获取上下文，因为任务可能在 syscall 期间被调度
