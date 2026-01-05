@@ -155,6 +155,116 @@ impl<T: PageTable> MemorySet<T> {
         Ok(())
     }
 
+    pub fn munmap(&mut self, start: usize, len: usize) -> Result<(), isize> {
+        // use crate::errno::-1;
+
+        // 1. 参数检查
+        if len == 0 {
+            return Err(-1);
+        }
+
+        let start_va = VirtAddr::from(start);
+        if !start_va.aligned() {
+            return Err(-1);
+        }
+
+        let end = start.checked_add(len).ok_or(-1isize)?;
+        let end_va = VirtAddr::from(end);
+
+        let start_vpn = start_va.floor();
+        let end_vpn = end_va.ceil();
+
+        if end_vpn <= start_vpn {
+            return Err(-1);
+        }
+
+        // 2. 查找完全匹配的 VMA
+        let mut target_idx: Option<usize> = None;
+
+        for (idx, area) in self.areas.iter().enumerate() {
+            if area.vpn_range.get_start() == start_vpn
+                && area.vpn_range.get_end() == end_vpn
+            {
+                target_idx = Some(idx);
+                break;
+            }
+        }
+
+        let idx = target_idx.ok_or(-1isize)?;
+
+        // 3. 真正 unmap 页表
+        {
+            let area = &mut self.areas[idx];
+            area.unmap(&mut self.page_table);
+            //     warn!("[munmap] unmap page table failed (maybe lazy alloc)");
+            // }
+        }
+
+        // 4. 删除 VMA（注意顺序）
+        self.areas.remove(idx);
+
+        Ok(())
+    }
+
+
+    /// 建立映射，错误码后续需要将-1改成特定的错误码
+    /// 目前支支持匿名映射
+    pub fn mmap(
+        &mut self,
+        start: usize,
+        len: usize,
+        prot: usize,  //内存权限
+        flags: usize, //映射类型
+        fd: isize, //文件句柄
+        off: usize, //文件偏移
+    ) -> Result<usize, isize> {
+        if len == 0 {
+            return Err(-1);
+        }
+
+        // 如果 start 为 0为动态分配，动态分配时mmap从堆顶开始分配len字节（对齐），
+        let start_va = if start == 0 {
+            let va = self.find_free_area(len)?;
+            VirtAddr::from(va)
+        } else {
+            let va = VirtAddr::from(start);
+            if !va.aligned() {
+                return Err(-1);
+            }
+            va
+        };
+
+        let end = usize::from(start_va).checked_add(len).ok_or(-1isize)?;
+        let end_va = VirtAddr::from(end);
+
+        let start_vpn = start_va.floor();
+        let end_vpn = end_va.ceil();
+        info!("[mmap]start_vpn: {:?}, end_vpn: {:?}", start_vpn, end_vpn);
+        // 检查 VMA 冲突
+        for area in self.areas.iter() {
+            if area.check_overlapping(start_vpn, end_vpn).is_some() {
+                return Err(-1);
+            }
+        }
+
+        // 仅支持匿名映射
+        if fd != -1 {
+            return Err(-1);
+        }
+
+        let perm = MapPermission::from_bits(prot as u8)
+            .unwrap_or(MapPermission::R | MapPermission::W | MapPermission::U);
+
+        let mut area = MapArea::new(start_va, end_va, MapType::Framed, perm);
+        //建立映射，并将数据初始化为零
+        self.insert_framed_area(
+            start_va,
+            end_va,
+            perm,
+        );
+        Ok(start_va.into())
+    }
+
     /// 构建内核空间 MemorySet，不包含内核栈
     pub fn new_kernel() -> Self {
         let mut memory_set = Self::new_bare();
@@ -318,6 +428,49 @@ impl<T: PageTable> MemorySet<T> {
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntryImpl> {
         self.page_table.translate(vpn)
     }
+    /// 从堆顶开始找到一块连续可用虚拟地址，并将堆顶向后移动（len/PAGE_SIZE）向下取整
+    /// len: 需要的字节数
+    pub fn find_free_area(&mut self, len: usize) -> Result<usize, isize> {
+
+
+        // 1. 对齐到页
+        let len = (len + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
+
+        // 2. 从 堆顶 开始搜索
+        let mut addr = self.brk;
+
+        loop {
+            let start_vpn = VirtAddr::from(addr).floor();
+            let end_vpn = VirtAddr::from(addr + len).ceil();
+
+            // 检查是否与已有 VMA 冲突
+            let mut conflict = false;
+            for area in self.areas.iter() {
+                if area.check_overlapping(start_vpn, end_vpn).is_some() {
+                    conflict = true;
+                    break;
+                }
+            }
+
+            if !conflict {
+                // 找到空闲区，更新 brk
+                self.brk = addr + len;
+                return Ok(addr);
+            }
+
+            // 冲突的话跳到上一个 VMA 结束后继续
+            let mut next_addr = addr + PAGE_SIZE;
+            for area in self.areas.iter() {
+                let area_start: usize = VirtAddr::from(area.vpn_range.get_start()).into();
+                let area_end: usize = VirtAddr::from(area.vpn_range.get_end()).into();
+                if area_start <= addr && addr < area_end {
+                    next_addr = area_end;
+                    break;
+                }
+            }
+            addr = next_addr;
+        }
+    }
 
     /// 回收数据页（清空 areas）
     pub fn recycle_data_pages(&mut self) {
@@ -381,6 +534,124 @@ impl MapArea {
             map_type: another.map_type,
             map_perm: another.map_perm,
         }
+    }
+
+    ///求虚拟地址的交集
+    pub fn check_overlapping(
+        &self,
+        start_vpn:VirtPageNum,
+        end_vpn:  VirtPageNum,
+    ) -> Option<(VirtPageNum,VirtPageNum)> {
+        let area_start_vpn: VirtPageNum = self.vpn_range.get_start();
+        let area_end_vpn: VirtPageNum = self.vpn_range.get_end();
+        if end_vpn < area_start_vpn || start_vpn > area_end_vpn {
+            None
+        } else {
+            let overlap_start = if start_vpn > area_start_vpn {
+                start_vpn
+            } else {
+                area_start_vpn
+            };
+            let overlap_end = if end_vpn < area_end_vpn {
+                end_vpn
+            } else {
+                area_end_vpn
+            };
+            Some((overlap_start, overlap_end))
+        }
+
+    }
+
+    ///将MaoAera分成三块
+    pub fn into_three(
+        &mut self,
+        start_vpn: VirtPageNum,
+        end_vpn: VirtPageNum,
+    ) -> Option<(MapArea, MapArea)> {
+        let area_start = self.vpn_range.get_start();
+        let area_end = self.vpn_range.get_end();
+        let start_va = VirtAddr::from(start_vpn);
+        let end_va = VirtAddr::from(end_vpn);
+        let area_end_va = VirtAddr::from(area_end);
+        let area_start_va = VirtAddr::from(area_start);
+        // 必须是严格的中间拆分
+        if !(area_start < start_vpn && start_vpn < end_vpn && end_vpn < area_end) {
+            return None;
+        }
+
+        // 1. 构造 middle: [start, end)
+        let mut middle = MapArea::new(
+            start_va,
+            end_va,
+            self.map_type,
+            self.map_perm,
+        );
+
+        // middle 继承 frame / lazy 状态
+        middle.data_frames = self.data_frames.clone();
+
+        // 2. 构造 right: [end, area_end)
+        let mut right = MapArea::new(
+            end_va,
+            area_end_va,
+            self.map_type,
+            self.map_perm,
+        );
+
+        right.data_frames = self.data_frames.clone();
+
+        // 3. 修改 self 为 left: [area_start, start)
+        self.vpn_range = VPNRange::new(area_start, start_vpn);
+
+        Some((middle, right))
+    }
+    /// 把MapAera分成前一块
+    pub fn shrink_to<T: PageTable>(
+        &mut self,
+        page_table: &mut T,
+        new_end: VirtAddr,
+    ) -> Result<(), ()> {
+        let new_end_vpn = new_end.floor();
+        let old_end_vpn = self.vpn_range.get_end();
+        let start_vpn = self.vpn_range.get_start();
+
+        if !(start_vpn < new_end_vpn && new_end_vpn < old_end_vpn) {
+            return Err(());
+        }
+
+        // unmap [new_end, old_end)
+        for vpn in new_end_vpn.0..old_end_vpn.0 {
+            let vpn = VirtPageNum(vpn);
+            let _ = page_table.unmap(vpn); // 已经 unmapped 也无所谓
+        }
+
+        // 更新区域
+        self.vpn_range = VPNRange::new(start_vpn, new_end_vpn);
+        Ok(())
+    }
+    ///将MapAera分成后一块
+    pub fn rshrink_to<T: PageTable>(
+        &mut self,
+        page_table: &mut T,
+        new_start: VirtAddr,
+    ) -> Result<(), ()> {
+        let new_start_vpn = new_start.floor();
+        let old_start_vpn = self.vpn_range.get_start();
+        let old_end_vpn = self.vpn_range.get_end();
+
+        if !(old_start_vpn < new_start_vpn && new_start_vpn < old_end_vpn) {
+            return Err(());
+        }
+
+        // unmap [old_start, new_start)
+        for vpn in old_start_vpn.0..new_start_vpn.0 {
+            let vpn = VirtPageNum(vpn);
+            let _ = page_table.unmap(vpn);
+        }
+
+        // 更新区域
+        self.vpn_range = VPNRange::new(new_start_vpn, old_end_vpn);
+        Ok(())
     }
 
     /// 映射单个虚拟页
@@ -491,5 +762,11 @@ bitflags! {
         const X = 1 << 3;
         /// 用户态可访问
         const U = 1 << 4;
+    }
+        pub struct MapFlags: u8 {
+        const MAP_ANON = 1 << 1;
+        const MAP_PRIVATE = 1 << 2;
+        const MAP_SHARED = 1 << 3;
+        const MAP_FIXED = 1 << 4;
     }
 }

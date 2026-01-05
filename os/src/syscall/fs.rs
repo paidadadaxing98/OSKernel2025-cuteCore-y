@@ -112,3 +112,21 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
         -1
     }
 }
+// 目前文件可能会因为输入none而发生panic,下面这个版本可以不发生pinic继续执行
+// pub fn sys_open(path: *const u8, flags: u32) -> isize {
+//     let process = current_process();
+//     let token = current_user_token();
+//     let path = translated_str(token, path);
+//     let flags = match OpenFlags::from_bits(flags) {
+//         Some(f) => f,
+//         None => return -1,
+//     };
+//     if let Some(inode) = open_file(path.as_str(), flags) {
+//         let mut inner = process.inner_exclusive_access();
+//         let fd = inner.alloc_fd();
+//         inner.fd_table[fd] = Some(inode);
+//         fd as isize
+//     } else {
+//         -1
+//     }
+// }

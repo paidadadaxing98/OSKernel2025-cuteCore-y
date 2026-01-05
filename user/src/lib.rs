@@ -138,6 +138,14 @@ pub fn brk(addr: usize) -> isize {
     sys_brk(addr)
 }
 
+pub fn munmap(start: usize, len: usize) -> isize {
+    sys_munmap(start, len)
+}
+
+pub fn mmap(start:usize,len:usize,prot:usize,flags:usize,fd:isize,off:usize) -> isize {
+    sys_mmap(start,len,prot,flags,fd as usize,off)
+}
+
 /// Action for a signal
 #[repr(C, align(16))]
 #[derive(Debug, Clone, Copy)]

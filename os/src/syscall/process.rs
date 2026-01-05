@@ -51,6 +51,35 @@ pub fn sys_brk(addr:usize) -> isize {
 
 }
 
+/// unmap用来释放一段虚拟地址空间.成果返回0，失败返回-1
+pub fn sys_munmap(start: usize, len: usize) -> isize {
+    let process = current_process();
+    let mut inner = process.inner_exclusive_access();
+    match inner.memory_set.munmap(start, len) {
+        Ok(()) => 0,
+        Err(e) => e,
+    }
+}
+
+pub fn sys_mmap(
+    start: usize,
+    len: usize,
+    prot: usize,
+    flags: usize,
+    fd: isize,
+    off: usize,
+) -> isize {
+    let process = current_process();
+    let mut inner = process.inner_exclusive_access();
+
+    // 调用 MemorySet::mmap
+    match inner.memory_set.mmap(start, len, prot, flags, fd, off) {
+        Ok(addr) => addr as isize, // 返回映射起始虚拟地址
+        Err(e) => e,               // 返回 -1
+    }
+}
+
+
 pub fn sys_fork() -> isize {
     let current_process = current_process();
     let new_process = current_process.fork();

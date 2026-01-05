@@ -11,8 +11,10 @@ const SYSCALL_YIELD: usize = 124;
 const SYSCALL_KILL: usize = 129;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_BRK: usize = 214;
+const SYSCALL_MUNMAP: usize = 215;
 const SYSCALL_FORK: usize = 220;
 const SYSCALL_EXEC: usize = 221;
+const SYSCALL_MMAP: usize = 222;
 const SYSCALL_WAITPID: usize = 260;
 const SYSCALL_GETCWD: usize = 17;
 const SYSCALL_CHDIR: usize = 49;
@@ -82,6 +84,10 @@ pub fn sys_fork() -> isize {
     syscall(SYSCALL_FORK, [0, 0, 0, 0, 0, 0])
 }
 
+pub fn sys_mmap(start:usize,len:usize,prot:usize,flags:usize,fd:usize,off:usize) -> isize {
+    syscall(SYSCALL_MMAP, [start, len, prot, flags , fd, off])
+}
+
 pub fn sys_exec(path: &str, args: &[*const u8]) -> isize {
     syscall(
         SYSCALL_EXEC,
@@ -103,4 +109,8 @@ pub fn sys_chdir(path: &str) -> isize {
 
 pub fn sys_brk(addr:usize) -> isize {
     syscall(SYSCALL_BRK, [addr, 0, 0, 0, 0, 0])
+}
+
+pub fn sys_munmap(start:usize, len:usize) -> isize {
+    syscall(SYSCALL_MUNMAP, [start, len, 0, 0, 0, 0])
 }
