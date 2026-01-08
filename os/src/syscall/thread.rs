@@ -1,12 +1,12 @@
 #![allow(unused)]
 
+use crate::hal::UserStackBase;
 use crate::{
     hal::{trap_handler, TrapContext},
     mm::kernel_token,
     task::{add_task, current_task, TaskControlBlock},
 };
 use alloc::sync::Arc;
-use crate::hal::UserStackBase;
 
 pub fn sys_thread_create(entry: usize, arg: usize) -> isize {
     let task = current_task().unwrap();

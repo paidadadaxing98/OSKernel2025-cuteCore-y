@@ -1,11 +1,9 @@
-use alloc::sync::Arc;
-use alloc::string::String;
-use core::clone;
-use log::info;
-use crate::fs::{open_dir, open_file, open_file_at, resolve_path, OpenFlags, UserStat};
-use crate::mm::{translated_byte_buffer, translated_str, UserBuffer,copy_to_user};
+use crate::fs::{open_dir, open_file, open_file_at, resolve_path, File, OpenFlags, UserStat};
+use crate::mm::{copy_to_user, translated_byte_buffer, translated_str, UserBuffer};
 use crate::task::{current_process, current_task, current_user_token};
+use alloc::sync::Arc;
 use bitflags::bitflags;
+use log::info;
 
 pub const AT_FDCWD: usize = 100usize.wrapping_neg();
 
@@ -85,7 +83,6 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         return -1;
     }
     if let Some(file) = &inner.fd_table[fd] {
-
         if !file.writable() {
             return -1;
         }
@@ -131,12 +128,11 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 }
 
 pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize {
-    println!("into openat");
     let task = current_task().unwrap();
     let token = task.get_user_token();
     let process = task.process.upgrade().unwrap();
     let mut inner = process.inner_exclusive_access();
-    let path =  translated_str(token, path);
+    let path = translated_str(token, path);
     let flags = match OpenFlags::from_bits(flags) {
         Some(flags) => flags,
         None => {
@@ -159,10 +155,10 @@ pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize
             _ => return -1, // EBADF
         }
     };
-    println!("before open_file");
     // 调用 open_file_at 打开文件
     // 判断是否是 O_DIRECTORY
-    if flags.contains(OpenFlags::DIRECTORY) { // 假设 OpenFlags 有 DIRECTORY 标志
+    if flags.contains(OpenFlags::DIRECTORY) {
+        // 假设 OpenFlags 有 DIRECTORY 标志
         // 如果是 O_DIRECTORY，调用 open_dir_at 或类似逻辑
         // 但由于 open_file_at 已经能返回目录的 OSInode，可以直接调用
         match open_file_at(&base_dir, &path, flags, mode.unwrap()) {
@@ -171,7 +167,6 @@ pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize
                 let fd = inner.alloc_fd();
                 let file: Arc<dyn File + Send + Sync> = inode;
                 inner.fd_table[fd] = Some(file);
-                println!("after open_dir");
                 fd as isize
             }
             _ => -1, // 不是目录或打开失败
@@ -194,14 +189,13 @@ pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize
 //     const VALID_FLAGS: OpenFlags = OpenFlags::from_bits_truncate(
 //
 
-pub fn sys_fstat(fd:usize,statbuf:*mut u8) -> isize{
-    let task = current_task().unwrap();
+pub fn sys_fstat(fd: usize, statbuf: *mut u8) -> isize {
     let proc = current_process();
     let token = current_user_token();
-    info!("[sys_fstat] fd:{}",fd);
+    info!("[sys_fstat] fd:{}", fd);
 
-    let Inode = match fd {
-        AT_FDCWD=> proc.inner_exclusive_access().cwd_inode.clone(),
+    let inode = match fd {
+        AT_FDCWD => proc.inner_exclusive_access().cwd_inode.clone(),
         fd => {
             let fd_table = &proc.inner_exclusive_access().fd_table;
             match &fd_table[fd] {
@@ -210,7 +204,7 @@ pub fn sys_fstat(fd:usize,statbuf:*mut u8) -> isize{
             }
         }
     };
-    if copy_to_user(token,&Inode.get_stat(),statbuf as *mut UserStat).is_err() {
+    if copy_to_user(token, &inode.get_stat(), statbuf as *mut UserStat).is_err() {
         log::error!("[sys_fstat] Failed to copy to {:?}", statbuf);
         return -1;
     }
@@ -271,5 +265,3 @@ bitflags! {
         const S_IXOTH   =   0o0001;
     }
 }
-
-

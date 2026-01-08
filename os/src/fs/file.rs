@@ -1,7 +1,8 @@
+use crate::fs::inode::{FatType, OSInode};
+use crate::mm::UserBuffer;
 use alloc::string::String;
-use core::cell::{UnsafeCell};
-use crate::fs::inode::OSInode;
-use crate::mm::{UserBuffer};
+use core::cell::UnsafeCell;
+use fatfs::SeekFrom;
 
 pub trait File: Send + Sync {
     // TODO：先给默认值，后续在改，否则impl File for OSInode的时候会报错
@@ -13,13 +14,14 @@ pub trait File: Send + Sync {
     // 默认返回，在impl File for OSInode里会覆盖
     fn is_dir(&self) -> bool;
     fn get_path(&self) -> String;
+    /// 从 offset 读取文件内容
+    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, isize>;
+    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, isize>;
 }
 
 pub const S_IFREG: u32 = 0o100000; //普通文件
 pub const S_IFDIR: u32 = 0o040000; //目录
 pub const BLK_SIZE: u32 = 512;
-
-
 
 pub struct Stat {
     pub st_dev: u64,
@@ -30,7 +32,7 @@ pub struct Stat {
     pub st_gid: u32,
     pub st_rdev: u64,
     pub __pad: u64,
-    pub st_size: UnsafeCell<i64>,   // 文件大小
+    pub st_size: UnsafeCell<i64>, // 文件大小
     pub st_blksize: u32,
     pub __pad2: i32,
     pub st_blocks: UnsafeCell<u64>, // 占用 512B 块数

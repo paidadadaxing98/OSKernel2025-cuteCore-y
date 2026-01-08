@@ -20,12 +20,13 @@
 //! - ELF 加载区域假设合法且与用户栈、trap_context 不冲突
 //! - Framed 类型映射的页帧在 `MapArea` 内部追踪，确保不会泄漏
 
+use crate::fs::File;
 use crate::hal::{PageTableEntryImpl, PageTableImpl, MEMORY_END, MMIO, PAGE_SIZE, TRAMPOLINE};
-use crate::mm::address::{VPNRange,align_up};
+use crate::mm::address::{align_up, VPNRange};
 use crate::mm::{
     frame_alloc, FrameTracker, PageTable, PhysAddr, PhysPageNum, StepByOne, VirtAddr, VirtPageNum,
 };
-use crate::sync::{UPIntrFreeCell};
+use crate::sync::UPIntrFreeCell;
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec;
@@ -33,9 +34,6 @@ use alloc::vec::Vec;
 use bitflags::bitflags;
 use lazy_static::lazy_static;
 use log::info;
-use crate::fs::{File};
-
-
 
 // 内核段符号，由链接脚本提供
 extern "C" {
@@ -88,8 +86,8 @@ impl<T: PageTable> MemorySet<T> {
         Self {
             page_table: T::new_kernel(),
             areas: Vec::new(),
-            brk:0,
-            heap_start:0,
+            brk: 0,
+            heap_start: 0,
         }
     }
 
@@ -186,9 +184,7 @@ impl<T: PageTable> MemorySet<T> {
         let mut target_idx: Option<usize> = None;
 
         for (idx, area) in self.areas.iter().enumerate() {
-            if area.vpn_range.get_start() == start_vpn
-                && area.vpn_range.get_end() == end_vpn
-            {
+            if area.vpn_range.get_start() == start_vpn && area.vpn_range.get_end() == end_vpn {
                 target_idx = Some(idx);
                 break;
             }
@@ -210,17 +206,16 @@ impl<T: PageTable> MemorySet<T> {
         Ok(())
     }
 
-
     /// 建立映射，错误码后续需要将-1改成特定的错误码
     /// 目前支支持匿名映射
     pub fn mmap(
         &mut self,
         start: usize,
         len: usize,
-        prot: usize,  //内存权限
-        _flags: usize, //映射类型
-        file_arc: Option<Arc<dyn File + Send+ Sync>>, //文件句柄
-        off: usize, //文件偏移
+        prot: usize,                                   //内存权限
+        _flags: usize,                                 //映射类型
+        file_arc: Option<Arc<dyn File + Send + Sync>>, //文件句柄
+        off: usize,                                    //文件偏移
     ) -> Result<usize, isize> {
         // println!("[mmap]start:{},len:{},port:{},flags:{},off:{}",start,len,prot,flags,off);
         if len == 0 {
@@ -244,7 +239,7 @@ impl<T: PageTable> MemorySet<T> {
 
         let start_vpn = start_va.floor();
         let end_vpn = end_va.ceil();
-        info!("[mmap]start_vpn: {:?}, end_vpn: {:?}", start_vpn, end_vpn);
+        // println!("[mmap]start_vpn: {:?}, end_vpn: {:?}", start_vpn, end_vpn);
         // 检查 VMA 冲突
         for area in self.areas.iter() {
             if area.check_overlapping(start_vpn, end_vpn).is_some() {
@@ -257,11 +252,7 @@ impl<T: PageTable> MemorySet<T> {
 
         MapArea::new(start_va, end_va, MapType::Framed, perm);
         //建立映射，并将数据初始化为零
-        self.insert_framed_area(
-            start_va,
-            end_va,
-            perm,
-        );
+        self.insert_framed_area(start_va, end_va, perm);
 
         if file_arc.is_some() {
             let file = file_arc.as_deref().ok_or(-1isize)?;
@@ -270,13 +261,15 @@ impl<T: PageTable> MemorySet<T> {
             let copy_len = core::cmp::min(len, file_len);
 
             let mut buf = vec![0u8; copy_len];
-            file.read_at(0, &mut buf).expect("[MemorySet.mmap]pelease add true fd");
+            file.read_at(0, &mut buf)
+                .expect("[MemorySet.mmap]pelease add true fd");
 
             let mut offset = off;
             let mut vpn = start_vpn;
 
             while offset < copy_len {
-                let page = self.page_table
+                let page = self
+                    .page_table
                     .translate(vpn)
                     .unwrap()
                     .ppn()
@@ -292,9 +285,6 @@ impl<T: PageTable> MemorySet<T> {
                 vpn.step();
             }
         }
-
-
-
 
         Ok(start_va.into())
     }
@@ -375,7 +365,7 @@ impl<T: PageTable> MemorySet<T> {
 
     /// 从 ELF 数据构建用户空间 MemorySet
     /// 返回 (MemorySet, user_stack_base, entry_point)
-    pub fn from_elf(elf_data: &[u8]) -> (Self,  usize) {
+    pub fn from_elf(elf_data: &[u8]) -> (Self, usize) {
         let mut memory_set = Self::new_bare();
         // map trampoline
         memory_set.map_trampoline();
@@ -420,10 +410,7 @@ impl<T: PageTable> MemorySet<T> {
         memory_set.heap_start = heap_start;
         memory_set.brk = heap_start;
 
-        (
-            memory_set,
-            elf.header.pt2.entry_point() as usize,
-        )
+        (memory_set, elf.header.pt2.entry_point() as usize)
     }
 
     /// 从已存在的用户空间 MemorySet 克隆新的 MemorySet
@@ -567,9 +554,9 @@ impl MapArea {
     ///求虚拟地址的交集
     pub fn check_overlapping(
         &self,
-        start_vpn:VirtPageNum,
-        end_vpn:  VirtPageNum,
-    ) -> Option<(VirtPageNum,VirtPageNum)> {
+        start_vpn: VirtPageNum,
+        end_vpn: VirtPageNum,
+    ) -> Option<(VirtPageNum, VirtPageNum)> {
         let area_start_vpn: VirtPageNum = self.vpn_range.get_start();
         let area_end_vpn: VirtPageNum = self.vpn_range.get_end();
         if end_vpn < area_start_vpn || start_vpn > area_end_vpn {
@@ -587,7 +574,6 @@ impl MapArea {
             };
             Some((overlap_start, overlap_end))
         }
-
     }
 
     ///将MaoAera分成三块
@@ -608,23 +594,13 @@ impl MapArea {
         }
 
         // 1. 构造 middle: [start, end)
-        let mut middle = MapArea::new(
-            start_va,
-            end_va,
-            self.map_type,
-            self.map_perm,
-        );
+        let mut middle = MapArea::new(start_va, end_va, self.map_type, self.map_perm);
 
         // middle 继承 frame / lazy 状态
         middle.data_frames = self.data_frames.clone();
 
         // 2. 构造 right: [end, area_end)
-        let mut right = MapArea::new(
-            end_va,
-            area_end_va,
-            self.map_type,
-            self.map_perm,
-        );
+        let mut right = MapArea::new(end_va, area_end_va, self.map_type, self.map_perm);
 
         right.data_frames = self.data_frames.clone();
 

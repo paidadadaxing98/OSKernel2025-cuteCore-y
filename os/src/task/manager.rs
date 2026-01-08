@@ -37,7 +37,7 @@
 use crate::sync::UPIntrFreeCell;
 use crate::task::process::ProcessControlBlock;
 use crate::task::task::TaskStatus;
-use crate::task::{current_task,TaskControlBlock};
+use crate::task::{current_task, TaskControlBlock};
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
 use lazy_static::lazy_static;
@@ -191,4 +191,3 @@ pub fn wake_blocked(task: Arc<TaskControlBlock>) {
         add_task(task);
     }
 }
-

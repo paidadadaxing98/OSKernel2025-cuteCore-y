@@ -1,7 +1,7 @@
-use core::arch::asm;
 use crate::hal::shutdown;
-use core::panic::PanicInfo;
 use crate::task::current_kstack_top;
+use core::arch::asm;
+use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

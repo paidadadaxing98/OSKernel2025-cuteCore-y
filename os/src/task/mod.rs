@@ -53,17 +53,19 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 pub use context::TaskContext;
 use lazy_static::lazy_static;
-pub use manager::{add_task, pid2process, remove_from_pid2process, find_task_by_pid, wakeup_task, wake_blocked};
+pub use manager::{
+    add_task, find_task_by_pid, pid2process, remove_from_pid2process, wake_blocked, wakeup_task,
+};
+pub use process::Rusage;
 pub use processor::{
     current_kstack_top, current_process, current_task, current_trap_cx, current_trap_cx_user_va,
     current_user_token, run_tasks, schedule, take_current_task,
 };
-pub use process::Rusage;
 
 use crate::fs::{open_initproc, OpenFlags};
 use crate::hal::shutdown;
 use crate::task::pid::IDLE_PID;
-pub use crate::task::process::{ProcessControlBlock,ProcessControlBlockInner};
+pub use crate::task::process::{ProcessControlBlock, ProcessControlBlockInner};
 use crate::task::task::TaskUserRes;
 pub use signal::SignalFlags;
 pub use task::{TaskControlBlock, TaskStatus};

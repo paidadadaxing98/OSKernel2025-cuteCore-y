@@ -39,8 +39,8 @@ pub use riscv::{
     bootstrap_init,
     // 配置常量
     config::{
-        BLOCK_SZ, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE, PAGE_SIZE_BITS,
-        TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE,UserStackBase,
+        UserStackBase, BLOCK_SZ, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, PAGE_SIZE,
+        PAGE_SIZE_BITS, TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE,
     },
     // 内核栈管理
     kernel_stack::{kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack},
@@ -69,9 +69,9 @@ pub use loongarch::{
     bootstrap_init,
     // 配置常量
     config::{
-        HIGH_BASE_EIGHT, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END, MEMORY_HIGH_BASE,
-        MEMORY_HIGH_BASE_VPN, MEMORY_SIZE, PAGE_SIZE, PAGE_SIZE_BITS, PALEN, TRAMPOLINE,
-        TRAP_CONTEXT_BASE, USER_STACK_SIZE, VA_MASK, VPN_SEG_MASK,UserStackBase,
+        UserStackBase, HIGH_BASE_EIGHT, KERNEL_HEAP_SIZE, KERNEL_STACK_SIZE, MEMORY_END,
+        MEMORY_HIGH_BASE, MEMORY_HIGH_BASE_VPN, MEMORY_SIZE, PAGE_SIZE, PAGE_SIZE_BITS, PALEN,
+        TRAMPOLINE, TRAP_CONTEXT_BASE, USER_STACK_SIZE, VA_MASK, VPN_SEG_MASK,
     },
     // 内核栈管理
     kernel_stack::{kstack_alloc, KernelStack},

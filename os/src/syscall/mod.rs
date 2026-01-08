@@ -21,22 +21,28 @@ const SYSCALL_EXECVE: usize = 221;
 const SYSCALL_MMAP: usize = 222;
 const SYSCALL_WAIT4: usize = 260;
 
-
 mod fs;
 mod process;
 mod sync;
 mod thread;
 
+use crate::task::Rusage;
 use crate::timer::Tms;
 pub use fs::*;
-use process::*;
-pub use process::CloneFlags;
-use crate::task::Rusage;
+pub use process::*;
 
 pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     match syscall_id {
         //SYSCALL_OPEN => sys_openat(args[0] as *const u8, args[1] as u32),
-        SYSCALL_OPENAT => sys_openat(args[0], args[1] as *const u8, args[2] as u32, args[3] as u32),
+        SYSCALL_OPENAT => {
+            // println!("{:#x?}", args[2]);
+            sys_openat(
+            args[0],
+            args[1] as *const u8,
+            args[2] as u32,
+            args[3] as u32,
+        )
+        },
         SYSCALL_CLOSE => sys_close(args[0]),
         SYSCALL_READ => sys_read(args[0], args[1] as *const u8, args[2]),
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
@@ -49,15 +55,40 @@ pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
         SYSCALL_UNAME => sys_uname(args[0] as *mut u8),
         SYSCALL_TIMES => sys_times(args[0] as *mut Tms),
         SYSCALL_BRK => sys_brk(args[0]),
-        SYSCALL_MUNMAP => sys_munmap(args[0],args[1]),
-        SYSCALL_FSTAT => sys_fstat(args[0],args[1] as *mut u8),
-        SYSCALL_MMAP => sys_mmap(args[0], args[1], args[2], args[3], args[4] as isize, args[5]),
-        SYSCALL_GET_TIME_OF_DAY => sys_gettimeofday(args[0] as *mut crate::timer::TimeVal,args[1] as *mut crate::timer::TimeZone),
+        SYSCALL_MUNMAP => sys_munmap(args[0], args[1]),
+        SYSCALL_FSTAT => sys_fstat(args[0], args[1] as *mut u8),
+        SYSCALL_MMAP => sys_mmap(
+            args[0],
+            args[1],
+            args[2],
+            args[3],
+            args[4] as isize,
+            args[5],
+        ),
+        SYSCALL_GET_TIME_OF_DAY => sys_gettimeofday(
+            args[0] as *mut crate::timer::TimeVal,
+            args[1] as *mut crate::timer::TimeZone,
+        ),
         // SYSCALL_FORK => sys_fork(),
-        SYSCALL_CLONE => sys_clone( args[0] as u32,args[1] as *const u8,args[2] as *mut u32,args[3],args[4] as *mut u32),
-        SYSCALL_EXECVE => sys_execve(args[0] as *const u8, args[1] as *const *const u8, args[2] as *const *const u8),
+        SYSCALL_CLONE => sys_clone(
+            args[0] as u32,
+            args[1] as *const u8,
+            args[2] as *mut u32,
+            args[3],
+            args[4] as *mut u32,
+        ),
+        SYSCALL_EXECVE => sys_execve(
+            args[0] as *const u8,
+            args[1] as *const *const u8,
+            args[2] as *const *const u8,
+        ),
         //SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
-        SYSCALL_WAIT4 => sys_wait4(args[0] as isize, args[1] as *mut u32, args[2] as u32, args[3] as *mut Rusage),
+        SYSCALL_WAIT4 => sys_wait4(
+            args[0] as isize,
+            args[1] as *mut u32,
+            args[2] as u32,
+            args[3] as *mut Rusage,
+        ),
         SYSCALL_NANOSLEEP => sys_nanosleep(
             args[0] as *const crate::timer::TimeSpec,
             args[1] as *mut crate::timer::TimeSpec,

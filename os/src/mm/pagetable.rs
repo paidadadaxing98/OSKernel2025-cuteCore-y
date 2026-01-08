@@ -119,7 +119,6 @@ pub fn translated_refmut<T>(token: usize, ptr: *mut T) -> &'static mut T {
         .get_mut()
 }
 
-
 /// 用户缓冲区容器
 ///
 /// ## Design
@@ -167,7 +166,6 @@ impl UserBuffer {
     }
     /// 将 src 的字节写入 UserBuffer
     /// 返回写入的字节数
-
 
     pub fn as_ptr(&self) -> *const u8 {
         if self.buffers.is_empty() || self.buffers[0].is_empty() {
@@ -262,9 +260,8 @@ impl UserBuffer {
         }
 
         write_bytes
-
     }
-  }
+}
 /// 为 UserBuffer 实现迭代器
 ///
 /// # Design
@@ -320,7 +317,9 @@ pub fn copy_to_user<T: 'static + Copy>(
     // use UserBuffer to write across user space pages
     } else {
         UserBuffer::new(translated_byte_buffer(token, dst as *mut u8, size))
-            .write_buffer(None,unsafe { core::slice::from_raw_parts(src as *const u8, size) });
+            .write_buffer(None, unsafe {
+                core::slice::from_raw_parts(src as *const u8, size)
+            });
     }
     Ok(())
 }
@@ -335,8 +334,9 @@ pub fn copy_from_user<T: 'static + Copy>(
         unsafe { core::ptr::copy_nonoverlapping(translated_ref(token, src), dst, 1) };
     // or we should use UserBuffer to read across user space pages
     } else {
-        UserBuffer::new(translated_byte_buffer(token, src as *const u8, size))
-            .read(None,unsafe { core::slice::from_raw_parts_mut(dst as *mut u8, size) });
+        UserBuffer::new(translated_byte_buffer(token, src as *const u8, size)).read(None, unsafe {
+            core::slice::from_raw_parts_mut(dst as *mut u8, size)
+        });
     }
     Ok(())
 }

@@ -259,8 +259,6 @@ impl TimeSpec {
     }
 }
 
-
-
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct ITimerVal {

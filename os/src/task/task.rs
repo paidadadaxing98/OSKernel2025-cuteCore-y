@@ -37,7 +37,10 @@
 //!   - 分配 / 回收 TID
 //! - TCB 与 TID 的生命周期严格绑定
 
-use crate::hal::{kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack, PageTableImpl, TrapContext, UserStackBase, PAGE_SIZE, USER_STACK_SIZE};
+use crate::hal::{
+    kstack_alloc, trap_cx_bottom_from_tid, ustack_bottom_from_tid, KernelStack, PageTableImpl,
+    TrapContext, UserStackBase, PAGE_SIZE, USER_STACK_SIZE,
+};
 use crate::mm::{MapPermission, MemorySet, PageTable, PhysPageNum, VirtAddr};
 use crate::sync::{UPIntrFreeCell, UPIntrRefMut};
 use crate::task::context::TaskContext;
@@ -83,7 +86,7 @@ impl TaskControlBlock {
         ustack_base: usize,
         alloc_user_res: bool,
     ) -> Self {
-        let res = TaskUserRes::new(Arc::clone(&process),  alloc_user_res);
+        let res = TaskUserRes::new(Arc::clone(&process), alloc_user_res);
         let trap_cx_ppn = res.trap_cx_ppn();
         let kstack = kstack_alloc();
         let kstack_top = kstack.get_top();

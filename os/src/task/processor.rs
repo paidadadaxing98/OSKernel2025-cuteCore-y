@@ -24,13 +24,13 @@
 //! - `PROCESSOR.current` 与实际正在 CPU 上运行的任务保持一致
 //! - 上下文切换期间，不得并发访问任务或处理器状态
 
+use crate::fs::inode::{OSInode, OpenFlags};
+use crate::fs::{open_dir, open_file};
 use crate::hal::{TrapContext, __switch};
 use crate::sync::UPIntrFreeCell;
 use crate::task::manager::fetch_task;
 use crate::task::process::ProcessControlBlock;
 use crate::task::{TaskContext, TaskControlBlock, TaskStatus};
-use crate::fs::{open_dir, open_file};
-use crate::fs::inode::{OSInode,OpenFlags};
 use alloc::sync::Arc;
 use lazy_static::lazy_static;
 

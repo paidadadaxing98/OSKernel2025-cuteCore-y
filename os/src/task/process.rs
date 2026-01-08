@@ -47,16 +47,16 @@
 //!   - 管理文件描述符和线程 ID 分配
 //! - 任务访问：通过 `get_task(tid)` 获取特定线程
 
-use crate::fs::{File, Stdin, Stdout,current_root_inode};
-use crate::hal::{trap_handler, PageTableImpl, TrapContext, UserStackBase,};
+use crate::fs::{current_root_inode, File, Stdin, Stdout};
+use crate::hal::{trap_handler, PageTableImpl, TrapContext, UserStackBase};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
 use crate::sync::{Condvar, Mutex, Semaphore, UPIntrFreeCell, UPIntrRefMut};
+use crate::syscall::CloneFlags;
 use crate::task::manager::{add_task, insert_into_pid2process};
 use crate::task::pid::{pid_alloc, PidHandle, RecycleAllocator};
 use crate::task::signal::SignalFlags;
 use crate::task::task::TaskControlBlock;
-use crate::syscall::CloneFlags;
-use crate::timer::{TimeVal, ITimerVal};
+use crate::timer::{ITimerVal, TimeVal};
 use alloc::string::{String, ToString};
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
@@ -82,7 +82,7 @@ pub struct ProcessControlBlockInner {
     pub exit_code: i32,
     pub cwd: String,
     //由于fat32每次打开都会开一个新inode，所以需要记录当前的inode是什么
-    pub cwd_inode:Arc<dyn File + Send + Sync>,
+    pub cwd_inode: Arc<dyn File + Send + Sync>,
     pub fd_table: Vec<Option<Arc<dyn File + Send + Sync>>>,
     pub signals: SignalFlags,
     pub tasks: Vec<Option<Arc<TaskControlBlock>>>,
@@ -115,7 +115,7 @@ impl ProcessControlBlock {
         // allocate a pid
         let pid_handle = pid_alloc();
         let pid = pid_handle.0;
-        let tgid = pid ;
+        let tgid = pid;
         let Root_Ionde = current_root_inode();
         let process = Arc::new(Self {
             pid: pid_handle,
@@ -316,7 +316,13 @@ impl ProcessControlBlock {
     //     add_task(task);
     //     child
     // }
-    pub fn sys_clone(self: &Arc<Self>, flags: CloneFlags, stack: *const u8, tls: usize, exit_signal: SignalFlags, ) -> Arc<ProcessControlBlock>{
+    pub fn sys_clone(
+        self: &Arc<Self>,
+        flags: CloneFlags,
+        stack: *const u8,
+        tls: usize,
+        exit_signal: SignalFlags,
+    ) -> Arc<ProcessControlBlock> {
         let mut parent = self.inner_exclusive_access();
         assert_eq!(parent.thread_count(), 1);
         // clone parent's memory_set completely including trampoline/ustacks/trap_cxs
@@ -326,7 +332,7 @@ impl ProcessControlBlock {
         memory_set.brk = parent.memory_set.brk;
         // alloc a pid
         let pid_handle = pid_alloc(); // 分配PID
-        // copy fd table
+                                      // copy fd table
         let mut new_fd_table: Vec<Option<Arc<dyn File + Send + Sync>>> = Vec::new();
         for fd in parent.fd_table.iter() {
             if let Some(file) = fd {
@@ -346,7 +352,7 @@ impl ProcessControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: exit_signal.bits() as i32,
-                    cwd_inode:parent.cwd_inode.clone(),
+                    cwd_inode: parent.cwd_inode.clone(),
                     cwd: parent.cwd.clone(),
                     fd_table: new_fd_table,
                     signals: SignalFlags::empty(),
@@ -482,7 +488,6 @@ impl ProcessControlBlockInner {
             }
         }
     }
-
 }
 
 #[allow(unused)]

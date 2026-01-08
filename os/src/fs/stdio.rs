@@ -1,5 +1,6 @@
-use crate::fs::file::{Stat, UserStat};
+use alloc::string::String;
 use super::File;
+use crate::fs::file::{Stat, UserStat};
 use crate::hal::console_getchar;
 use crate::mm::UserBuffer;
 
@@ -35,9 +36,19 @@ impl File for Stdin {
     fn get_stat(&self) -> UserStat {
         todo!()
     }
+
+    fn is_dir(&self) -> bool {
+        todo!()
+    }
+
+    fn get_path(&self) -> String {
+        todo!()
+    }
+
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, isize> {
         todo!()
     }
+
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, isize> {
         todo!()
     }
@@ -63,9 +74,19 @@ impl File for Stdout {
     fn get_stat(&self) -> UserStat {
         todo!()
     }
+
+    fn is_dir(&self) -> bool {
+        todo!()
+    }
+
+    fn get_path(&self) -> String {
+        todo!()
+    }
+
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, isize> {
         todo!()
     }
+
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, isize> {
         todo!()
     }
