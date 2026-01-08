@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 use alloc::string::String;
 use core::clone;
 use log::info;
-use crate::fs::{open_dir, open_file, open_file_at, resolve_path, OpenFlags, UserStat};
+use crate::fs::{open_dir, open_file, open_file_at, resolve_path, File, OpenFlags, UserStat};
 use crate::mm::{translated_byte_buffer, translated_str, UserBuffer,copy_to_user};
 use crate::task::{current_process, current_task, current_user_token};
 use bitflags::bitflags;
@@ -131,6 +131,7 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 }
 
 pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize {
+    println!("into openat");
     let task = current_task().unwrap();
     let token = task.get_user_token();
     let process = task.process.upgrade().unwrap();
@@ -143,20 +144,49 @@ pub fn sys_openat(dirfd: usize, path: *const u8, flags: u32, mode: u32) -> isize
         }
     };
     let mode = StatMode::from_bits(mode);
-    let mut fd_table = inner.fd_table.pop();
-    // let file_descriptor = inner.cwd ;
-    let base_dir = inner.cwd.clone();
 
-    // let new_file_descriptor = match open_file_at(&base_dir, &path, flags, mode.unwrap()) {
-    //     Some(file_descriptor) => file_descriptor,
-    //     None => return -1,
-    // };
-    if let Some(inode) = open_file_at(&base_dir, &path, flags, mode.unwrap()) {
-        let fd = inner.alloc_fd();
-        inner.fd_table[fd] = Some(inode);
-        fd as isize
+    // let file_descriptor = inner.cwd ;
+    //let base_dir = inner.cwd.clone();
+    let base_dir = if dirfd == AT_FDCWD {
+        inner.cwd.clone()
     } else {
-        -1
+        // 从 fd_table 查找 dirfd 对应的目录
+        match inner.fd_table.get(dirfd) {
+            Some(Some(file)) if file.is_dir() => {
+                // 假设 File trait 有 get_path 方法
+                file.get_path()
+            }
+            _ => return -1, // EBADF
+        }
+    };
+    println!("before open_file");
+    // 调用 open_file_at 打开文件
+    // 判断是否是 O_DIRECTORY
+    if flags.contains(OpenFlags::DIRECTORY) { // 假设 OpenFlags 有 DIRECTORY 标志
+        // 如果是 O_DIRECTORY，调用 open_dir_at 或类似逻辑
+        // 但由于 open_file_at 已经能返回目录的 OSInode，可以直接调用
+        match open_file_at(&base_dir, &path, flags, mode.unwrap()) {
+            Some(inode) if inode.is_dir() => {
+                // 如果是目录，分配 fd 并返回
+                let fd = inner.alloc_fd();
+                let file: Arc<dyn File + Send + Sync> = inode;
+                inner.fd_table[fd] = Some(file);
+                println!("after open_dir");
+                fd as isize
+            }
+            _ => -1, // 不是目录或打开失败
+        }
+    } else {
+        // 不是 O_DIRECTORY，按文件处理
+        match open_file_at(&base_dir, &path, flags, mode.unwrap()) {
+            Some(inode) => {
+                let fd = inner.alloc_fd();
+                let file: Arc<dyn File + Send + Sync> = inode;
+                inner.fd_table[fd] = Some(file);
+                fd as isize
+            }
+            None => -1,
+        }
     }
 }
 
@@ -169,7 +199,6 @@ pub fn sys_fstat(fd:usize,statbuf:*mut u8) -> isize{
     let proc = current_process();
     let token = current_user_token();
     info!("[sys_fstat] fd:{}",fd);
-
     let Inode = match fd {
         AT_FDCWD=> proc.inner_exclusive_access().cwd_inode.clone(),
         fd => {

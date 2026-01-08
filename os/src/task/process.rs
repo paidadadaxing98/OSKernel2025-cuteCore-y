@@ -48,7 +48,7 @@
 //! - 任务访问：通过 `get_task(tid)` 获取特定线程
 
 use crate::fs::{File, Stdin, Stdout,current_root_inode};
-use crate::hal::{trap_handler, PageTableImpl, TrapContext, UserStackBase, TrapImpl};
+use crate::hal::{trap_handler, PageTableImpl, TrapContext, UserStackBase,};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
 use crate::sync::{Condvar, Mutex, Semaphore, UPIntrFreeCell, UPIntrRefMut};
 use crate::task::manager::{add_task, insert_into_pid2process};

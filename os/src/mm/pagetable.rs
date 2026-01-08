@@ -167,27 +167,7 @@ impl UserBuffer {
     }
     /// 将 src 的字节写入 UserBuffer
     /// 返回写入的字节数
-    pub fn write(&mut self, src: &[u8]) -> usize {
-        let mut written = 0; // 已写入的字节数
-        let total_len = src.len();
 
-        for buffer in self.buffers.iter_mut() {
-            // buffer 可能小于剩余要写的字节数
-            let n = core::cmp::min(buffer.len(), total_len - written);
-            if n == 0 {
-                break;
-            }
-            // 拷贝 n 个字节到当前 buffer
-            buffer[..n].copy_from_slice(&src[written..written + n]);
-            written += n;
-
-            if written >= total_len {
-                break;
-            }
-        }
-
-        written
-    }
 
     pub fn as_ptr(&self) -> *const u8 {
         if self.buffers.is_empty() || self.buffers[0].is_empty() {
@@ -340,7 +320,7 @@ pub fn copy_to_user<T: 'static + Copy>(
     // use UserBuffer to write across user space pages
     } else {
         UserBuffer::new(translated_byte_buffer(token, dst as *mut u8, size))
-            .write(unsafe { core::slice::from_raw_parts(src as *const u8, size) });
+            .write_buffer(None,unsafe { core::slice::from_raw_parts(src as *const u8, size) });
     }
     Ok(())
 }

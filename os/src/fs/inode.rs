@@ -22,6 +22,8 @@ pub struct OSInode {
     Stat: Stat,
     // 未来如果需要支持多核，则需要改用更强的同步机制（如 spin::Mutex）。
     file: UPIntrFreeCell<FatType>,
+    pub is_directory: bool, // 是否是目录
+    pub path: String,        // 文件的完整路径
 }
 
 pub enum FatType {
@@ -40,14 +42,14 @@ unsafe impl Send for OSInode {}
 unsafe impl Sync for OSInode {}
 
 impl OSInode {
-    pub fn new(readable: bool, writable: bool, file: FatType, is_dir:bool) -> Self {
+    pub fn new(readable: bool, writable: bool, file: FatType, is_dir:bool, path:String) -> Self {
         let mut st_mode = if is_dir { 0o040000 } else { 0o100000 }; // S_IFDIR / S_IFREG
         if readable { st_mode |= 0o444 } // r--
         if writable { st_mode |= 0o222 } // -w-
-
+        
         let st_size = 0;
         let st_blocks = ((st_size + 511) / 512) as u64;
-
+        let is_directory = is_dir ;
         Self {
             readable,
             writable,
@@ -66,6 +68,8 @@ impl OSInode {
                 st_blocks:UnsafeCell::new(st_blocks),
             },
             file: unsafe { UPIntrFreeCell::new(file) },
+            is_directory,
+            path,
         }
     }
 
@@ -94,7 +98,15 @@ impl OSInode {
         }
         v
     }
+    pub fn is_dir(&self) -> bool {
+        let inner = self.file.exclusive_access();
+        match *inner {
+            FatType::Dir(_) => true,
+            FatType::File(_) => false,
+        }
+    }
 }
+
 lazy_static! {
     pub static ref ROOT_DIR: UPIntrFreeCell<Dir<'static, FatFsBlockDevice, DefaultTimeProvider, LossyOemCpConverter>> = {
         // 获取文件系统的锁
@@ -134,9 +146,11 @@ bitflags! {
         // 读写
         const RDWR = 1 << 1;
         // 创建
-        const CREATE = 1 << 9;
+        const CREATE = 1 << 6;
         // 截断（若存在则以可写方式打开，但是长度清空为0）
         const TRUNC = 1 << 10;
+        //
+        const DIRECTORY = 1 << 21;
     }
 }
 
@@ -218,6 +232,13 @@ impl super::File for OSInode {
             }
         }
     }
+    fn is_dir(&self) -> bool {
+        self.is_directory
+    }
+
+    fn get_path(&self) -> String {
+        self.path.clone()
+    }
 }
 
 impl Stat {
@@ -276,7 +297,15 @@ pub fn open_initproc(flags: OpenFlags) -> Option<Arc<OSInode>> {
     root_dir
         .open_file("initproc")
         .ok()
-        .map(|inode| Arc::new(OSInode::new(readable, writable, FatType::File(inode),false)))
+        .map(|inode|{
+            Arc::new(OSInode::new(
+                readable,
+                writable,
+                FatType::File(inode),
+                false,
+                String::from("/initproc"),
+            ))
+        })
 }
 
 // 实现不完整，还未支持文件的所有权描述
@@ -307,39 +336,52 @@ pub fn open_file(path: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
         if flags.contains(OpenFlags::TRUNC) {
             inode.truncate().expect("Truncation failed");
         }
-        Arc::new(OSInode::new(readable, writable, FatType::File(inode),false))
+        Arc::new(OSInode::new(
+            readable,
+            writable,
+            FatType::File(inode),
+            false,
+            full_path, // 传入完整路径
+        ))
     })
 }
+
 /// 在指定目录下打开文件
 pub fn open_file_at(
-    base_dir: &String,
+    base_dir: &str,
     path: &str,
     flags: OpenFlags,
     mode: StatMode,
 ) -> Option<Arc<OSInode>> {
-    let (readable, writable) = flags.read_write();
-
-    // 解析完整路径
-    let full_path = resolve_path(path, &base_dir);
-    let path_in_fs = full_path.strip_prefix("/").unwrap_or(&full_path);
-
-    // 获取根目录的独占访问
+    let full_path = resolve_path(path, base_dir);
     let root_dir = ROOT_DIR.exclusive_access();
 
+    // 尝试打开目录
+    if let Ok(dir) = root_dir.open_dir(&full_path) {
+        return Some(Arc::new(OSInode::new(
+            true, // 可读
+            false, // 不可写
+            FatType::Dir(dir),
+            true, // 是目录
+            full_path,
+        )));
+    }
+
     // 尝试打开或创建文件
-    let maybe_inode = if flags.contains(OpenFlags::CREATE) {
-        root_dir
-            .open_file(path_in_fs)
-            .or_else(|_| root_dir.create_file(path_in_fs))
-            .ok()
+    let file_result = if flags.contains(OpenFlags::CREATE) {
+        root_dir.create_file(&full_path).or_else(|_| root_dir.open_file(&full_path))
     } else {
-        root_dir.open_file(path_in_fs).ok()
+        root_dir.open_file(&full_path)
     };
-    maybe_inode.map(|mut inode| {
-        if flags.contains(OpenFlags::TRUNC) {
-            inode.truncate().expect("Truncation failed");
-        }
-        Arc::new(OSInode::new(readable, writable, FatType::File(inode), false))
+
+    file_result.ok().map(|file| {
+        Arc::new(OSInode::new(
+            flags.contains(OpenFlags::RDONLY) || flags.contains(OpenFlags::RDWR),
+            flags.contains(OpenFlags::WRONLY) || flags.contains(OpenFlags::RDWR),
+            FatType::File(file),
+            false, // 不是目录
+            full_path,
+        ))
     })
 }
 
@@ -362,7 +404,7 @@ pub fn create_dir(path: &str) -> Result<Arc<OSInode>, isize> {
 
     root_dir
         .create_dir(path_in_fs)
-        .map(|dir| Arc::new(OSInode::new(true, false, FatType::Dir(dir),true)))
+        .map(|dir| Arc::new(OSInode::new(true, false, FatType::Dir(dir),true, full_path)))
         .map_err(|_| -1)
 }
 
@@ -382,7 +424,7 @@ pub fn open_dir(path: &str) -> Result<Arc<OSInode>, isize> {
 
     root_dir
         .open_dir(path_in_fs)
-        .map(|dir| Arc::new(OSInode::new(true, false, FatType::Dir(dir),true)))
+        .map(|dir| Arc::new(OSInode::new(true, false, FatType::Dir(dir),true, full_path)))
         .map_err(|_| -1)
 }
 
@@ -411,5 +453,6 @@ pub fn current_root_inode() -> Arc<OSInode> {
         false,
         FatType::Dir(root_dir.clone()),
         true,
+        String::from("/"),
     ))
 }
