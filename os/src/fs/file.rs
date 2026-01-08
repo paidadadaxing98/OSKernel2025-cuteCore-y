@@ -1,18 +1,18 @@
+use alloc::string::String;
 use core::cell::{UnsafeCell};
+use crate::fs::inode::OSInode;
 use crate::mm::{UserBuffer};
 
 pub trait File: Send + Sync {
+    // TODO：先给默认值，后续在改，否则impl File for OSInode的时候会报错
     fn readable(&self) -> bool;
     fn writable(&self) -> bool;
     fn read(&self, buf: UserBuffer) -> usize;
     fn write(&self, buf: UserBuffer) -> usize;
     fn get_stat(&self) -> UserStat;
-    /// 读取文件内容到 buf 中，从文件 offset 开始
-    /// 返回实际读取的字节数
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, isize>;
-    /// 写文件
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<usize, isize>;
-
+    // 默认返回，在impl File for OSInode里会覆盖
+    fn is_dir(&self) -> bool;
+    fn get_path(&self) -> String;
 }
 
 pub const S_IFREG: u32 = 0o100000; //普通文件

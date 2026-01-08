@@ -26,7 +26,6 @@ pub use arch::INTR_MASKING_INFO; // 中断屏蔽相关信息（用于处理中�
 pub use arch::{bootstrap_init, machine_init}; // 系统的早期初始化和硬件初始化
 pub use arch::{trap_handler, trap_return}; // 中断处理入口函数及返回函数
 
-pub use arch::TrapImpl;
 
 // --- 内存管理相关 ---
 pub use arch::{PageTableEntryImpl, PageTableImpl}; // 页表项和页表的具体实现
